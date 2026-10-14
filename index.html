@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="he" dir="rtl" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#FFD400">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="נדל״ן בע״מ">
+<title>נדל״ן בע״מ · דמו CRM</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ── tokens ── */
+:root{
+  --yellow:#FFD400; --ink:#1A1A1A; --charcoal:#3C3C3B;
+  --bg:#FFFFFF; --surface:#F6F6F4; --line:#E6E6E2; --error:#C62828;
+  --radius:16px; --tap:44px;
+  --font:'Heebo',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45}
+body{min-height:100dvh}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,bdi.num,.tabnum{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+a{color:inherit}
+
+/* ── layout shell ── */
+.shell{display:flex;min-height:100dvh}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.side-nav{display:none}
+.bottom-nav{position:fixed;inset-inline:0;bottom:0;display:flex;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.bottom-nav a{flex:1;min-height:56px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-weight:700;color:var(--charcoal)}
+.bottom-nav a[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--yellow)}
+.has-bottom-nav .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+@media (min-width:900px){
+  .side-nav{display:flex;flex-direction:column;gap:6px;width:240px;padding:20px 14px;border-inline-start:0;border-inline-end:1px solid var(--line);position:sticky;top:0;height:100dvh;background:var(--surface)}
+  .side-nav a.mod{min-height:var(--tap);display:flex;align-items:center;padding-inline:14px;border-radius:999px;text-decoration:none;font-weight:700}
+  .side-nav a.mod[aria-current=page]{background:var(--yellow);box-shadow:0 0 0 2px var(--ink) inset}
+  .side-nav .spacer{flex:1}
+  .bottom-nav{display:none}
+  .has-bottom-nav .main{padding-bottom:0}
+}
+.topbar{position:sticky;top:0;z-index:15;background:var(--bg);display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);min-height:60px}
+.topbar h1{margin:0;font-size:1.35rem;font-weight:800;flex:1}
+.brand-mini{display:block;width:34px;height:34px;margin-inline-start:auto}
+.brand-mini img{width:100%;height:100%;object-fit:contain}
+.back{display:inline-flex;align-items:center;gap:4px;min-height:var(--tap);padding-inline:8px;background:none;border:0;font-weight:700;cursor:pointer;text-decoration:none}
+.back::before{content:"→";font-size:1.1em}
+.content{padding:16px;max-width:760px;width:100%;margin-inline:auto}
+
+/* ── controls ── */
+.btn{min-height:var(--tap);padding:0 22px;border-radius:999px;border:2px solid var(--ink);background:var(--bg);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn.primary{background:var(--yellow)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.6;cursor:progress}
+.link{background:none;border:0;padding:8px 0;min-height:var(--tap);font-weight:700;text-decoration:underline;cursor:pointer}
+.field{margin-bottom:16px}
+.field label,.field .lbl{display:block;font-weight:700;margin-bottom:6px}
+.req{color:var(--charcoal)}
+.input,select.input,textarea.input{width:100%;min-height:var(--tap);border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}
+textarea.input{min-height:90px;resize:vertical}
+.input:focus{outline:2px solid var(--ink);outline-offset:1px}
+.field.invalid .input{border-color:var(--error)}
+.err{color:var(--error);font-size:.9rem;margin:4px 0 0;min-height:0}
+.err:empty{display:none}
+.hint{color:var(--charcoal);font-size:.9rem;margin:4px 0 0}
+.note{background:var(--surface);border-radius:10px;padding:8px 12px;font-size:.95rem;margin:-6px 0 14px}
+.row{display:flex;gap:10px;align-items:flex-start}
+.row>*{flex:1}
+.affix{position:relative}
+.affix .input{padding-left:36px}
+.affix span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--charcoal)}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:999px;overflow:hidden}
+.seg label{margin:0;min-height:40px;display:flex;align-items:center;padding:0 16px;cursor:pointer;font-weight:700}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{background:var(--ink);color:var(--bg)}
+.seg label span{display:flex;align-items:center;min-height:40px;padding:0 4px;border-radius:999px}
+.seg label:has(input:checked){background:var(--ink);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:2px solid var(--yellow);outline-offset:-4px}
+.add-inline{display:flex;gap:8px;margin-top:8px}
+.add-inline .input{flex:1}
+
+/* ── form ── */
+.form-section{border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.form-section h2{margin:0 0 14px;font-size:1.15rem;font-weight:800}
+.sticky-save{position:sticky;bottom:0;background:var(--bg);padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);z-index:10}
+.calc{background:var(--surface);border-radius:12px;padding:10px 12px;font-weight:700;margin-bottom:12px}
+.calc small{font-weight:400;color:var(--charcoal)}
+
+/* ── map ── */
+.map{height:240px;border-radius:12px;border:1px solid var(--line);z-index:0}
+.map.small{height:170px}
+.geo-results{list-style:none;margin:6px 0 0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.geo-results:empty{display:none}
+.geo-results li button{width:100%;text-align:start;background:var(--bg);border:0;border-bottom:1px solid var(--line);padding:10px 12px;min-height:var(--tap);cursor:pointer}
+.range-row{display:flex;align-items:center;gap:12px;margin-top:10px}
+.range-row input{flex:1;accent-color:var(--ink)}
+
+/* ── list ── */
+.search{width:100%}
+.tabs{display:flex;margin:12px 0}
+.list{list-style:none;margin:0;padding:0}
+.list li a{display:block;padding:12px 4px;border-bottom:1px solid var(--line);text-decoration:none;min-height:var(--tap)}
+.list .r1{display:flex;justify-content:space-between;gap:8px}
+.list .name{font-weight:800}
+.list .meta{color:var(--charcoal);font-size:.92rem}
+.state{padding:32px 8px;text-align:center;color:var(--charcoal)}
+
+/* ── card ── */
+.chip{display:inline-block;padding:2px 12px;border-radius:999px;font-size:.85rem;font-weight:700}
+.chip.active{background:var(--yellow);color:var(--ink)}
+.chip.archived{background:var(--surface);color:var(--charcoal)}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
+.dl dt{color:var(--charcoal)}
+.dl dd{margin:0;font-weight:500}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+.card-head h2{margin:0;font-size:1.5rem;font-weight:800}
+.card-head p{margin:2px 0 8px;color:var(--charcoal)}
+
+/* ── home & login ── */
+.hero{min-height:100dvh;display:flex;flex-direction:column;padding:16px}
+.hero-top{display:flex;justify-content:space-between;align-items:center;min-height:var(--tap)}
+.hero-logo{width:72px}
+.login-box{margin:auto;width:100%;max-width:380px;background:var(--bg);padding:24px;border-radius:var(--radius)}
+.login-box img{display:block;width:200px;margin:0 auto 20px}
+.pw{position:relative}
+.pw .input{padding-right:56px}
+.pw .eye{position:absolute;right:4px;top:0;height:var(--tap);width:var(--tap);background:none;border:0;cursor:pointer}
+
+/* ── toast & dialog ── */
+#toast{position:fixed;inset-inline:16px;bottom:96px;margin:auto;max-width:420px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 16px;text-align:center;z-index:50;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
+#toast.show{opacity:1;transform:none}
+#toast.has-action{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;padding-inline-end:8px;text-align:start}
+#toast.has-action.show{pointer-events:auto}
+.toast-act{flex:0 0 auto;min-height:var(--tap);padding:0 14px;border:1px solid var(--yellow);border-radius:999px;background:transparent;color:var(--yellow);font-weight:800;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease,color .14s ease}
+.toast-act:hover{background:var(--yellow);color:var(--ink);box-shadow:2px 2px 0 #fff;transform:translate(-1px,-1px)}
+.toast-act:active{box-shadow:none;transform:translate(1px,1px)}
+.toast-act:focus-visible{outline:3px solid #fff;outline-offset:2px}
+/* list row action ("סגירת עסקה" / "החזרה לפעילות") under the date */
+.deal-row{position:relative}
+.deal-row>a>.meta:last-child{min-height:44px;padding-inline-end:142px}
+.row-act{position:absolute;inset-inline-end:10px;top:47px;min-height:44px;padding:0 12px;border-width:1.5px;background:var(--surface);font-size:.8rem;line-height:1;white-space:nowrap}
+dialog{border:0;border-radius:var(--radius);padding:20px;width:min(420px,calc(100% - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog h2{margin:0 0 14px;font-size:1.2rem}
+dialog .stack{display:flex;flex-direction:column;gap:10px}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Prime Location visual direction: business-card clarity, built for daily work. */
+:root{--shadow:0 8px 24px rgba(26,26,26,.07)}
+html{scroll-behavior:smooth}
+body{font-weight:400;letter-spacing:-.01em;background:#fff}
+button,input,select,textarea{letter-spacing:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.num,bdi.num,.tabnum,input[dir=ltr],bdi[dir=ltr]{font-variant-numeric:tabular-nums}
+input[dir=ltr],bdi[dir=ltr]{direction:ltr}
+
+/* navigation */
+.shell{background:linear-gradient(90deg,#fff 0,#fff 70%,#fbfbfa 100%)}
+.main{background:#fff}
+.topbar{min-height:72px;padding:12px 20px;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.topbar::after{content:"";position:absolute;inset-inline-start:20px;bottom:-1px;width:52px;height:3px;background:var(--yellow)}
+.topbar h1{font-size:1.55rem;line-height:1.1;letter-spacing:-.035em}
+.brand-mini{width:42px;height:42px;flex:0 0 42px}
+.back{border-radius:999px;padding-inline:10px;white-space:nowrap}.back::before{font-size:1.3rem}
+.bottom-nav{min-height:70px;padding:0 10px env(safe-area-inset-bottom);gap:6px;border-top:1px solid var(--line);box-shadow:0 -8px 28px rgba(26,26,26,.06)}
+.bottom-nav a{position:relative;min-width:0;min-height:60px;border-radius:12px 12px 0 0;font-size:.95rem;white-space:nowrap}
+.bottom-nav a::before{content:"";width:7px;height:7px;margin-inline-end:8px;border:2px solid currentColor;border-radius:50%}
+.bottom-nav a[aria-current=page]{box-shadow:inset 0 4px 0 var(--yellow);background:#fffdf3}.bottom-nav a[aria-current=page]::before{background:var(--yellow)}
+.bottom-nav a.nav-new{flex:0 0 76px;align-self:center;min-height:48px;margin-top:-12px;border:2px solid var(--ink);border-radius:999px;background:var(--yellow);color:var(--ink);box-shadow:4px 4px 0 var(--ink);white-space:nowrap}
+.bottom-nav a.nav-new::before{display:none}
+.bottom-nav a.nav-new:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.bottom-nav a.nav-new:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.has-bottom-nav .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}.content{padding:24px 20px 112px;max-width:800px}
+
+/* controls */
+.btn{min-height:48px;padding-inline:24px;box-shadow:none;transition:transform .15s,box-shadow .15s}.btn:hover{box-shadow:3px 3px 0 var(--ink);transform:translate(-1px,-1px)}.btn:active{box-shadow:none;transform:none}
+.link{border-radius:8px;text-underline-offset:4px;text-decoration-thickness:1px}
+.input,select.input,textarea.input{min-height:50px;border:1.5px solid #d7d7d2;border-radius:12px;padding:11px 14px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.input:hover{border-color:#9b9b96}.input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(255,212,0,.38)}
+.field{margin-bottom:18px}.field label,.field .lbl{font-size:.94rem;margin-bottom:7px}.field.invalid .input{border-color:var(--error);box-shadow:0 0 0 2px rgba(198,40,40,.1)}.err{font-weight:500}
+.note{border-inline-start:4px solid var(--yellow);border-radius:8px;padding:10px 12px}
+.seg{width:100%;padding:3px;background:#fff;gap:2px}.seg label{flex:1;justify-content:center;min-height:42px;padding:0 10px;border-radius:999px}.seg label span{justify-content:center;width:100%;min-height:38px}
+.seg label:has(input:checked){background:var(--yellow);color:var(--ink)}.seg input:checked+span{background:transparent;color:inherit}.seg label:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:-3px}
+
+/* deal lists */
+body[data-screen=list] .content{max-width:820px}
+.search{padding-inline-start:48px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%233C3C3B' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
+.tabs{margin:14px 0 22px}.tabs .seg{max-width:320px;margin-inline-start:auto}.list{border-top:1px solid var(--line)}
+.list li a{padding:17px 14px 17px 10px;border-inline-start:4px solid transparent;transition:.15s}.list li a:hover,.list li a:focus-visible{background:var(--surface);border-inline-start-color:var(--yellow);outline:none}
+.list .r1{align-items:baseline}.list .name{font-size:1.05rem}.list .meta{margin-top:3px}.list .r1>.meta{margin:0;white-space:nowrap;font-size:.86rem}
+.state{padding:42px 12px;border:1px dashed #cecec8;border-radius:16px;background:var(--surface)}
+
+/* forms */
+body[data-screen=form],body[data-screen=form] .main{background:var(--surface)}body[data-screen=form] .content{padding:20px 16px calc(128px + env(safe-area-inset-bottom))}
+.form-section{background:#fff;border:1px solid var(--line);padding:22px 18px;margin-bottom:16px;box-shadow:0 1px 0 rgba(26,26,26,.03)}
+.form-section h2{position:relative;margin:0 0 22px;padding-bottom:9px;font-size:1.18rem}.form-section h2::after{content:"";position:absolute;inset-inline-start:0;bottom:0;width:44px;height:3px;background:var(--yellow)}
+.form-section .form-section{background:var(--surface);box-shadow:none}.calc{border:1px solid var(--line);border-inline-start:4px solid var(--yellow)}
+.map{height:260px;border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#e9e9e5}.map.small{height:190px}.range-row{min-height:44px}.range-row input{accent-color:var(--yellow);min-height:24px}.geo-results{box-shadow:var(--shadow)}
+.sticky-save{position:fixed;inset-inline:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px);z-index:30}.sticky-save .btn{display:flex;max-width:720px;margin-inline:auto;min-height:52px}
+
+/* deal card */
+body[data-screen=card] .content{padding-top:28px}.card-head{padding:0 0 18px;border-bottom:1px solid var(--line)}.card-head h2{font-size:2rem;line-height:1.1;letter-spacing:-.04em;margin-top:10px}.chip{padding:5px 13px;border:1px solid #d4b100}
+.actions{gap:10px;margin:18px 0}.card-head+.actions .btn{flex:1;min-width:120px}.card-head+.actions .btn:nth-child(2){background:var(--yellow)}
+.dl{grid-template-columns:minmax(92px,auto) 1fr;gap:0;margin:6px 0 24px;border-top:1px solid var(--line)}.dl dt,.dl dd{padding:11px 0;border-bottom:1px solid var(--line)}.dl dt{padding-inline-end:16px;font-size:.92rem}.dl dd{font-weight:700;text-align:start}
+.map.small+.actions .btn{min-height:44px;padding-inline:17px;font-size:.94rem;background:#fff}
+
+/* Brand screens: the ad's traced bottom wave, behind all content. */
+.hero{position:relative;isolation:isolate;min-height:100dvh;padding:22px;overflow:hidden;background:#fff}.hero::before{content:"";position:absolute;z-index:-1;inset:auto 0 0;width:100%;height:min(25vw,220px);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 600 800 200' preserveAspectRatio='none'%3E%3Cpath fill='%23FFD400' d='M0,614 C150,690 300,718 430,717 C580,716 700,695 800,672 L800,800 L0,800 Z'/%3E%3C/svg%3E") center bottom/100% 100% no-repeat}
+.hero-top{position:relative;z-index:2;min-height:58px;align-items:flex-start}.hero-logo{width:116px}
+.login-box{position:relative;max-width:420px;padding:34px 28px;border:1px solid var(--line);border-top:5px solid var(--yellow);box-shadow:0 18px 60px rgba(26,26,26,.13)}.login-box img{width:min(230px,78%);margin-bottom:28px}.login-box .btn{margin-top:6px;min-height:52px}.pw .eye{right:6px;top:3px;border-radius:50%}
+#toast{bottom:94px;border:2px solid var(--yellow);box-shadow:0 12px 32px rgba(0,0,0,.18)}dialog{border:2px solid var(--ink);border-top:8px solid var(--yellow);box-shadow:0 24px 80px rgba(0,0,0,.24)}dialog::backdrop{background:rgba(26,26,26,.64);backdrop-filter:blur(2px)}
+
+@media (min-width:900px){
+  .side-nav{width:272px;padding:26px 22px 22px;gap:10px;border-inline-end:1px solid var(--line);background:#f7f7f5;box-shadow:-8px 0 24px rgba(26,26,26,.04)}
+  .side-nav::before{content:"ניהול עסקאות";font-size:.78rem;font-weight:700;color:#6a6a66;margin:10px 14px 2px}.brand-side{display:block;padding:4px 8px 22px;border-bottom:1px solid var(--line);margin-bottom:8px}.brand-side img{display:block;width:176px!important;margin:auto}
+  .side-nav a.mod{position:relative;min-height:52px;padding-inline:18px;border:2px solid transparent}.side-nav a.mod::after{content:"←";position:absolute;inset-inline-end:16px;opacity:0}.side-nav a.mod:hover{background:#fff;border-color:var(--line)}.side-nav a.mod[aria-current=page]{background:var(--yellow);border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}.side-nav a.mod[aria-current=page]::after{opacity:1}
+  .topbar{padding-inline:32px}.topbar::after{inset-inline-start:32px}.content{padding:32px 36px 100px;max-width:900px}body[data-screen=form] .content{padding-bottom:128px}.sticky-save{inset-inline:auto;left:0;right:272px;padding-inline:36px}.sticky-save .btn{max-width:828px}
+  .hero{padding:34px 48px}.hero-logo{width:150px}
+}
+@media (max-width:420px){.topbar{min-height:66px;padding:10px 16px}.topbar h1{font-size:1.35rem}.brand-mini{width:38px;height:38px;flex-basis:38px}.content{padding-inline:16px}.hero{padding:18px 16px}.login-box{padding:28px 22px}.row{gap:8px}.form-section{padding:20px 14px}.dl{grid-template-columns:minmax(84px,auto) 1fr}.dl dt{font-size:.88rem}}
+/* functional: + חדש in the top bar on desktop; archive marker; option editor */
+.new-top{display:none}
+@media (min-width:900px){.new-top{display:inline-flex}}
+.row-chip{margin-inline-start:6px;vertical-align:middle}
+.opt-edit{font-size:.88rem;padding:4px 0;min-height:var(--tap)}
+.opt-rows{list-style:none;margin:0 0 12px;padding:0;max-height:55vh;overflow:auto}
+.opt-rows li{padding:10px 0;border-bottom:1px solid var(--line)}
+.opt-rows .add-inline{margin:0}
+.cf-list:empty{display:none}
+
+/* Round 2: Leah's business card becomes a tactile daily work tool. */
+:is(.btn,.link,.home-btn,.side-nav a.mod,.bottom-nav a,.seg label){
+  transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease,border-color .14s ease,color .14s ease;
+}
+:is(.btn,.home-btn,.side-nav a.mod,.seg label):not([disabled]):hover{
+  transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink);
+}
+:is(.btn,.home-btn,.side-nav a.mod,.seg label):not([disabled]):active{
+  transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink);
+}
+.link:not([disabled]):hover{background:var(--yellow);box-shadow:3px 3px 0 var(--ink);text-decoration:none;transform:translate(-1px,-1px)}
+.link:not([disabled]):active{box-shadow:none;transform:translate(1px,1px)}
+:is(.btn,.link,.home-btn,.side-nav a.mod,.bottom-nav a,.seg label):focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+/* Home proposal D: two compact horizontal yellow pills. */
+.home-buttons{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;width:100%;max-width:278px;margin:0 auto;padding:40px 0}
+.home-btn{display:flex;width:100%;min-height:70px;flex:0 0 auto;align-items:center;justify-content:space-between;padding:0 24px;background:var(--yellow);color:var(--ink);border:2px solid var(--ink);border-radius:999px;box-shadow:5px 5px 0 var(--ink);text-align:center;text-decoration:none}
+.home-btn::before,.home-btn::after{display:none}
+.home-btn strong{font-size:1.31rem;line-height:1.1;font-weight:800}.home-btn small{margin-inline-start:12px;font-size:.75rem;font-weight:600;white-space:nowrap}
+.home-btn:hover{background:#ffe043;box-shadow:3px 3px 0 var(--ink)}
+.home-btn:active{box-shadow:1px 1px 0 var(--ink)}
+
+/* Segmented controls: compact beside inputs, balanced at full width. */
+.seg{min-height:50px;width:100%;padding:3px;gap:3px;border:2px solid var(--ink);border-radius:13px;overflow:visible;background:var(--surface)}
+.seg label{min-width:76px;min-height:40px;padding:0 10px;border:1px solid transparent;border-radius:8px;white-space:nowrap}
+.seg label span{min-height:40px;padding:0 3px}
+.seg label:has(input:checked){background:var(--yellow);border-color:var(--ink);box-shadow:2px 2px 0 var(--ink);color:var(--ink)}
+.seg label:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
+.row>.seg{flex:0 0 auto;width:auto;height:50px}
+.row>.seg label{flex:0 1 auto}
+
+/* New and supporting controls. */
+.new-top{flex:0 0 auto;min-height:46px;padding-inline:18px;white-space:nowrap}
+.row-chip{margin-inline-start:8px;padding:2px 9px;border:1px solid var(--charcoal);background:#fff;color:var(--charcoal);font-size:.75rem;line-height:1.35}
+.opt-edit,.add-field{width:max-content;color:var(--charcoal);font-size:.88rem;text-decoration-thickness:1px;text-underline-offset:4px}
+.add-field{margin-top:2px;padding-inline:8px;border:1px dashed transparent}
+.add-field:hover{border-color:var(--ink)}
+#new-field{position:relative;border:2px solid var(--ink);border-top:7px solid var(--yellow);box-shadow:5px 5px 0 var(--ink);animation:field-in .18s ease-out}
+#new-field::before{content:"";position:absolute;inset-inline-start:22px;top:-14px;width:14px;height:14px;background:var(--yellow);border-inline-start:2px solid var(--ink);border-top:2px solid var(--ink);transform:rotate(45deg)}
+@keyframes field-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+.geo-box{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}
+.geo-box .btn{min-height:50px;padding-inline:18px;background:var(--yellow)}
+.geo-results{margin-top:8px;border:2px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 var(--ink);background:#fff}
+.geo-results li:last-child button{border-bottom:0}.geo-results li button:hover,.geo-results li button:focus-visible{background:#fff8cf;outline:2px solid var(--ink);outline-offset:-3px}
+
+dialog{max-height:calc(100dvh - 32px);overflow:auto}
+.opt-rows{margin:0 0 16px;padding-inline:2px;max-height:58vh}
+.opt-rows li{padding:14px 0;border-bottom:1px solid var(--line)}
+.opt-rows .add-inline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:7px}
+.opt-rows .btn,.opt-rows .link{min-height:44px;padding-inline:13px}
+.opt-rows .hint{margin-inline:2px}.opt-rows .warn{padding:8px 10px;border-inline-start:4px solid var(--error);background:#fff1f1;color:var(--error);font-weight:700}
+.opt-rows .confirm{margin-top:10px;padding:12px;border:1px solid #e1b5b5;border-radius:10px;background:#fff7f7}
+.opt-rows .confirm .row{align-items:center}.opt-rows .confirm .btn{border-color:var(--error);color:var(--error)}
+
+@media (max-width:520px){
+  .row{flex-wrap:wrap}.row>.seg{flex:0 0 auto}
+  .opt-rows .add-inline{grid-template-columns:minmax(0,1fr) auto}.opt-rows .add-inline .link{grid-column:2}
+  .geo-box{grid-template-columns:minmax(0,1fr) auto}.geo-box .btn{padding-inline:14px}
+}
+@media (min-width:900px){
+  .hero{padding:34px 48px}.home-buttons{max-width:300px;padding-block:64px}
+  .side-nav a.mod:not([aria-current=page]):hover{background:#fff;border-color:var(--ink)}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* ── dashboard + demo (GPT) ── */
+.demo-banner{
+  min-height:32px;margin:0;padding:6px 16px;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border-bottom:1px solid var(--line);color:#565652;font-size:.78rem;font-weight:500;
+  line-height:1.25;text-align:center
+}
+.demo-hint{margin:10px 0 0;text-align:center;font-size:.85rem}
+.credit{
+  position:absolute;z-index:2;inset-inline:18px;bottom:max(18px,env(safe-area-inset-bottom));margin:0;
+  color:var(--ink);font-size:.8rem;font-weight:700;text-align:end
+}
+
+/* The dashboard build has four destinations; keep both button and link versions identical. */
+.bottom-nav :is(a,button).nav-new{
+  flex:0 0 76px;align-self:center;min-width:0;min-height:48px;margin-top:-12px;padding:0 10px;
+  border:2px solid var(--ink);border-radius:999px;background:var(--yellow);color:var(--ink);
+  box-shadow:4px 4px 0 var(--ink);font-weight:800;line-height:1;white-space:nowrap;text-decoration:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;appearance:none;
+  transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease
+}
+.bottom-nav :is(a,button).nav-new::before{display:none}
+.bottom-nav :is(a,button).nav-new:hover{background:#ffe043;transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.bottom-nav :is(a,button).nav-new:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.bottom-nav :is(a,button).nav-new:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.bottom-nav .nav-board{font-size:.88rem}
+.side-new{width:100%;margin-top:8px;box-shadow:3px 3px 0 var(--ink)}
+
+/* Dashboard: compact paper-like work queues rather than a generic card grid. */
+.content.dash{display:grid;align-items:start;gap:16px;max-width:1120px;background:var(--surface)}
+.dash-sec{
+  min-width:0;padding:18px 16px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)
+}
+.dash-sec>h2,.card-matches>h3{
+  position:relative;margin:0 0 18px;padding-bottom:10px;font-size:1.22rem;line-height:1.2;font-weight:800
+}
+.dash-sec>h2::after,.card-matches>h3::after{
+  content:"";position:absolute;inset-inline-start:0;bottom:0;width:42px;height:3px;background:var(--yellow)
+}
+.dash-sec>h3{margin:18px 0 8px;font-size:1rem;line-height:1.25}
+.dash-sec>h2+h3{margin-top:0}
+.u-list,.match-list,.sd-list,.ml{list-style:none;margin:0;padding:0}
+
+.u-list{border-top:1px solid var(--line)}
+.urgent{position:relative;border-bottom:1px solid var(--line);border-inline-start:5px solid #777772}
+.urgent.red{border-inline-start-color:#B42318}
+.urgent.yellow{border-inline-start-color:#9A6700}
+.urgent>a{
+  min-height:54px;padding:8px 11px;display:flex;flex-wrap:wrap;align-content:center;gap:0 8px;
+  color:inherit;text-decoration:none
+}
+.urgent>a:hover,.urgent>a:focus-visible{background:var(--surface);outline:none}
+.urgent>a:focus-visible{box-shadow:inset 0 0 0 2px var(--ink)}
+.u-name{flex:0 0 100%;font-weight:800;line-height:1.25}
+.u-why{color:var(--charcoal);font-size:.88rem;line-height:1.35}
+.urgent.red .u-why{color:#8F1D15;font-weight:700}
+.urgent.yellow .u-why{color:#765000;font-weight:700}
+.more{
+  min-height:44px;padding:8px 4px;display:inline-flex;align-items:center;color:var(--ink);font-size:.9rem;
+  font-weight:700;text-underline-offset:4px
+}
+.more:hover{background:linear-gradient(transparent 68%,var(--yellow) 68%)}
+.more-row{margin:4px 0 0;display:flex;flex-wrap:wrap;gap:4px 18px}
+
+.match-list{display:grid;gap:9px}
+.match{
+  min-width:0;border:1px solid var(--line);border-inline-start:5px solid var(--charcoal);border-radius:11px;background:#fff;overflow:hidden
+}
+.match.lvl-high{border-inline-start-color:var(--ink)}
+.match.lvl-good{border-inline-start-color:#63635f}
+.match.lvl-possible{border-inline-start-style:dashed;border-inline-start-color:#777772}
+.match.is-near{border-inline-start-color:#9A6700;background:#fffdf5}
+.match>a{min-height:76px;padding:10px 12px;display:grid;gap:4px;color:inherit;text-decoration:none}
+.match>a:hover,.match>a:focus-visible{background:var(--surface);outline:none}
+.match>a:focus-visible{box-shadow:inset 0 0 0 2px var(--ink)}
+.match-lvl{
+  width:max-content;max-width:100%;padding:2px 8px;border:1px solid var(--ink);border-radius:999px;
+  font-size:.72rem;font-weight:800;line-height:1.45
+}
+.lvl-high .match-lvl{background:var(--ink);color:#fff}
+.lvl-good .match-lvl{background:#fff}
+.lvl-possible .match-lvl{border-style:dashed;background:var(--surface)}
+.is-near .match-lvl{border-color:#765000;background:#fff3bd;color:#5C3E00}
+.match-title{font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.mchip{padding:2px 7px;border:1px solid var(--line);border-radius:999px;font-size:.72rem;font-weight:700;line-height:1.4}
+.mchip.ok{border-color:#AACDB4;background:#EAF5ED;color:#245B33}
+.mchip.near{border-color:#D6C287;background:#FFF6D8;color:#694B00}
+.mchip.warn{border-color:#D9AAA6;background:#FFF0EF;color:#842018}
+
+.sd-list{border-top:1px solid var(--line)}
+.sd{
+  min-width:0;padding:11px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-areas:"what what" "lead owner" "tag tag";gap:6px 8px;
+  align-items:center;border-bottom:1px solid var(--line)
+}
+.sd-what{grid-area:what;min-width:0;font-weight:800;line-height:1.3;overflow-wrap:anywhere}
+.sd-n{
+  min-height:44px;padding:5px 9px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
+  border-radius:9px;background:var(--surface);font-size:.86rem;font-weight:700;text-decoration:none;white-space:nowrap
+}
+.sd-n:hover,.sd-n:focus-visible{border-color:var(--ink);background:#fff;outline:none}
+.sd-n:focus-visible{box-shadow:0 0 0 2px var(--ink)}
+.sd-n:nth-of-type(1){grid-area:lead}
+.sd-n:nth-of-type(2){grid-area:owner}
+.sd-tag{
+  grid-area:tag;width:max-content;max-width:100%;padding:2px 8px;border-radius:999px;background:var(--surface);
+  color:var(--charcoal);font-size:.75rem;font-weight:800
+}
+.sd.short .sd-tag{background:#FDECEA;color:#8F1D15}
+.sd.surplus .sd-tag{background:#FFF3C4;color:#664700}
+.sd.even .sd-tag{border:1px solid var(--line);background:#fff}
+
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.kpi{min-width:0;min-height:88px;padding:13px 10px;display:flex;flex-direction:column;justify-content:center;background:var(--surface)}
+.kpi:nth-child(odd){border-inline-end:1px solid var(--line)}
+.kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}
+.kpi .num{font-size:1.65rem;line-height:1;font-weight:800}
+.kpi span{margin-top:7px;color:var(--charcoal);font-size:.78rem;line-height:1.25;font-weight:500}
+
+/* Matching sections on deal cards and the all-matches screen. */
+.card-matches{margin-top:28px;padding-top:20px;border-top:1px solid var(--line)}
+.card-matches>h3{font-size:1.18rem}
+.near{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.near>summary{min-height:48px;padding:10px 13px;display:flex;align-items:center;font-weight:800;cursor:pointer;list-style-position:inside}
+.near>summary:hover{background:#ECECE8}
+.near[open]>summary{border-bottom:1px solid var(--line)}
+.near>.match-list,.near>.ml{padding:10px}
+.ml{display:grid;gap:18px}
+.ml-group{min-width:0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.ml-lead{min-height:48px;margin:-4px 0 12px;padding:4px;display:flex;flex-direction:column;justify-content:center;font-weight:800;text-decoration:none}
+.ml-lead:hover,.ml-lead:focus-visible{text-decoration:underline}
+.ml-lead small{color:var(--charcoal);font-size:.82rem;font-weight:500}
+
+.filter-chip{
+  width:max-content;max-width:100%;min-height:44px;margin:10px 0 14px;padding:4px 6px 4px 12px;display:flex;
+  align-items:center;gap:8px;border:1px solid var(--ink);border-radius:999px;background:#fffdf3;font-size:.88rem;font-weight:700
+}
+.filter-chip span{min-width:0;overflow-wrap:anywhere}
+.filter-chip a{
+  flex:0 0 34px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;
+  color:var(--ink);text-decoration:none
+}
+.filter-chip a:hover,.filter-chip a:focus-visible{background:var(--yellow);outline:2px solid var(--ink);outline-offset:0}
+
+.group-pick{margin-top:10px;display:grid;gap:6px}
+.group-pick>span{color:var(--charcoal);font-size:.8rem;font-weight:700}
+.group-pick>.input{min-height:44px;font-size:.88rem}
+
+@media (min-width:560px){
+  .sd{grid-template-columns:minmax(150px,1fr) auto auto auto;grid-template-areas:"what lead owner tag";gap:6px 10px}
+  .sd-tag{width:auto;text-align:center}
+}
+@media (min-width:900px){
+  .content.dash{grid-template-columns:repeat(2,minmax(0,1fr));padding-top:28px}
+  .dash-sec{padding:22px}
+  .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpi{min-height:100px}
+  .kpi:nth-child(n){border-bottom:0}
+  .kpi:not(:last-child){border-inline-end:1px solid var(--line)}
+  #dash-pace{grid-column:1/-1}
+}
+@media (max-width:420px){
+  .bottom-nav{gap:2px;padding-inline:4px}
+  .bottom-nav a{font-size:.8rem}
+  .bottom-nav .nav-board{font-size:.76rem}
+  .bottom-nav :is(a,button).nav-new{flex-basis:68px;padding-inline:7px;font-size:.88rem}
+  .dash-sec{padding:16px 13px}
+  .match>a{padding-inline:10px}
+}
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dlg"></dialog>
+
+<script>window.PL_APP = {"name":"נדל״ן בע״מ","logo":"assets/logo.png","mark":"assets/mark.png","logoAlt":"נדל״ן בע״מ – נכסים מסחריים ותעשייה","ownerTitle":"נכסים","features":{"dashboard":true},"demo":{"email":"broker@nadlan-demo.co.il","password":"Demo2026!","credit":"נבנה ע״י WAIVES"}};</script>
+<script src="seed.js"></script>
+<script src="demo-db.js"></script>
+<script>
+'use strict';
+/* ════════════ config ════════════ */
+const CONFIG = {
+  url: 'https://tbuhhxcgkxuovbdtebqv.supabase.co',
+  key: 'sb_publishable_Ij-Epg5Zm1jcu9BOWckDow_OCa_QSTj',
+};
+// Per-build settings. The live app has no window.PL_APP, so every value below is today's live behaviour.
+// The demo build (tools/build-demo.mjs) injects window.PL_APP before this script.
+const APP = (() => {
+  const c = window.PL_APP || {};
+  return Object.freeze({
+    name: c.name || 'פריים לוקיישן',
+    logo: c.logo || 'assets/logo.png',
+    mark: c.mark || 'assets/pin.png',
+    logoAlt: c.logoAlt || 'פריים לוקיישן – נדל״ן במרכז העניינים',
+    ownerTitle: c.ownerTitle || 'בעלים / משכיר',
+    demo: c.demo ? Object.freeze({ ...c.demo }) : null,   // { email, password }
+    dashboard: !!c.features?.dashboard,
+    mapCenter: c.mapCenter || [31.61, 34.77],
+  });
+})();
+const MAP_CENTER = APP.mapCenter; // קריית גת
+const LISTS = { need: 'lead_need', lead_purpose: 'lead_purpose', owner_purpose: 'owner_purpose' };
+const MODULES = {
+  lead:  { title: 'מתעניינים',    one: 'מתעניין',  empty: 'אין עדיין מתעניינים.' },
+  owner: { title: APP.ownerTitle, one: 'נכס',       empty: 'אין עדיין נכסים של בעלים.' },
+};
+
+/* ════════════ helpers ════════════ */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+
+const Phone = {
+  // returns '05X-XXXXXXX' or null
+  normalize(raw) {
+    let d = String(raw || '').replace(/[\s\-().]/g, '').replace(/^\+/, '');
+    if (d.startsWith('00972')) d = '0' + d.slice(5);
+    else if (d.startsWith('972')) d = '0' + d.slice(3);
+    return /^05\d{8}$/.test(d) ? d.slice(0, 3) + '-' + d.slice(3) : null;
+  },
+  error: 'מספר נייד צריך להכיל 10 ספרות ולהתחיל ב-05',
+  wa: (p) => 'https://wa.me/972' + p.replace(/\D/g, '').slice(1),
+  tel: (p) => 'tel:' + p.replace(/\D/g, ''),
+};
+const CURRENCY = { ILS: '₪', USD: '$' };
+const fmt = {
+  money: (n, cur = 'ILS') => n == null || n === '' ? '' : (CURRENCY[cur] || '₪') + ' ' + Math.round(Number(n)).toLocaleString('en-US'),
+  num: (n) => n == null || n === '' ? '' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }),
+  date: (iso) => { if (!iso) return ''; const [y, m, d] = String(iso).slice(0, 10).split('-'); return `${d}/${m}/${y}`; },
+  pct: (n) => n == null ? '' : Number(n).toFixed(1) + '%',
+  bi: (s) => `<bdi class="num">${esc(s)}</bdi>`, // number + Hebrew unit: keep natural RTL order
+  ltr: (s, cls = 'num') => `<bdi dir="ltr" class="${cls}">${esc(s)}</bdi>`,
+  size: (v, unit) => v == null ? '' : `${fmt.num(v)} ${unit === 'dunam' ? 'דונם' : 'מ״ר'}`,
+};
+const parseNum = (s) => { const t = String(s ?? '').replace(/[^\d.]/g, ''); return t === '' ? null : Number(t); };
+
+/* Simulated price-per-sqm estimate (phase 2 → Edge Function). Always shown as "הערכה". */
+function estimatePricePerSqm(purposeText, builtSqm) {
+  if (!builtSqm) return null;
+  const p = purposeText || '';
+  let base = 8000;
+  if (p.includes('מחסן')) base = 6000;
+  else if (p.includes('תעשי')) base = 7000;
+  else if (p.includes('חנות')) base = 14000;
+  else if (p.includes('מסחר')) base = 12000;
+  const factor = builtSqm > 2000 ? 0.9 : builtSqm < 200 ? 1.15 : 1;
+  return Math.round(base * factor / 100) * 100;
+}
+
+// toast(msg) or toast(msg, { label: 'ביטול', run }) – the action button keeps the toast up a bit longer
+function toast(msg, action) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show'); t.classList.toggle('has-action', !!action);
+  if (action) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
+    b.onclick = () => { t.classList.remove('show'); action.run(); }; t.append(' ', b);
+  }
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), action ? 6000 : 2600);
+}
+
+/* ════════════ data layer ════════════ */
+function supabaseDB() {
+  const sb = window.supabase.createClient(CONFIG.url, CONFIG.key, { auth: { persistSession: true, autoRefreshToken: true } });
+  const must = (r) => { if (r.error) throw r.error; return r.data; };
+  return {
+    async session() { return must(await sb.auth.getSession()).session; },
+    onAuth(cb) { sb.auth.onAuthStateChange((_e, s) => cb(s)); },
+    async signIn(email, password) { must(await sb.auth.signInWithPassword({ email, password })); },
+    async signOut() { await sb.auth.signOut(); },
+    async changePassword(password) { must(await sb.auth.updateUser({ password })); },
+    async isMember() { return !!must(await sb.from('crm_members').select('user_id').maybeSingle()); },
+    async loadAll() {
+      const [options, fields, lead, owner] = await Promise.all([
+        sb.from('option_lists').select('*').order('sort').order('created_at'),
+        sb.from('custom_fields').select('*').order('sort').order('created_at'),
+        sb.from('lead_deals').select('*, contact:contacts(*)'),
+        sb.from('owner_deals').select('*, contact:contacts(*)'),
+      ]);
+      return { options: must(options), fields: must(fields), lead: must(lead), owner: must(owner) };
+    },
+    async findContact(phone) { return must(await sb.from('contacts').select('*').eq('phone', phone).maybeSingle()); },
+    async saveDeal(module, p) { return must(await sb.rpc(module === 'lead' ? 'save_lead_deal' : 'save_owner_deal', { p })); },
+    async addOption(listKey, value) { return must(await sb.rpc('add_option', { p_list_key: listKey, p_value: value })); },
+    async addField(f) { return must(await sb.from('custom_fields').insert(f).select().single()); },
+    async updateOption(id, patch) { return must(await sb.from('option_lists').update(patch).eq('id', id).select().single()); },
+    async setStatus(module, id, status) {
+      must(await sb.from(module === 'lead' ? 'lead_deals' : 'owner_deals')
+        .update({ status, closed_at: status === 'active' ? null : new Date().toISOString() }).eq('id', id));
+    },
+  };
+}
+const DB = window.PL_TEST_DB || window.PL_DEMO_DB || supabaseDB();
+
+/* ════════════ state ════════════ */
+const S = {
+  session: null, data: null, loadError: null,
+  list: { lead: { tab: 'active', q: '' }, owner: { tab: 'active', q: '' } },
+};
+// hidden ("removed") values stay readable on old deals, and selectable only on a deal that already uses them
+const opts = (key, keepId) => (S.data?.options || []).filter(o => o.list_key === key && (!o.hidden || o.id === keepId));
+const optText = (id) => (S.data?.options || []).find(o => o.id === id)?.value || '';
+const fieldsOf = (module) => (S.data?.fields || []).filter(f => f.module === module);
+const SECTIONS = ['contact', 'property', 'location', 'money'];
+const sectionOf = (f) => SECTIONS.includes(f.section) ? f.section : 'money';
+const deals = (module) => S.data?.[module] || [];
+const findDeal = (module, id) => deals(module).find(d => d.id === id);
+
+async function reload() {
+  S.loadError = null;
+  try { S.data = await DB.loadAll(); }
+  catch (e) { console.error(e); S.loadError = e; }
+}
+
+/* ════════════ router ════════════ */
+// #/  ·  #/m/lead  ·  #/m/lead/new  ·  #/m/lead/new/dup/<id>  ·  #/m/lead/<id>  ·  #/m/lead/<id>/edit
+// dashboard builds only: #/matches  ·  #/m/lead?g=<group>&a=<city>&u=soon|stale (list filter, survives refresh / back)
+function parseRoute() {
+  const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
+  const p = path.split('/').filter(Boolean);
+  if (APP.dashboard && p[0] === 'matches') return { name: 'matches' };
+  if (p[0] !== 'm' || !MODULES[p[1]]) return { name: 'home' };
+  const module = p[1];
+  if (!p[2]) return { name: 'list', module, filter: APP.dashboard ? listFilter(module, query) : null };
+  if (p[2] === 'new') return { name: 'form', module, mode: p[3] === 'dup' ? 'dup' : 'new', id: p[4] };
+  if (p[3] === 'edit') return { name: 'form', module, mode: 'edit', id: p[2] };
+  return { name: 'card', module, id: p[2] };
+}
+const go = (hash) => { if (location.hash === hash) render(); else location.hash = hash; };
+// Leaving a form with unsaved typing asks first (in-app links, back button, and tab close/refresh).
+const Dirty = { on: false, hash: '' };
+const LEAVE_MSG = 'לצאת בלי לשמור? מה שהוקלד בטופס יימחק.';
+window.addEventListener('hashchange', () => {
+  if (Dirty.on && location.hash !== Dirty.hash) {
+    if (!confirm(LEAVE_MSG)) { history.pushState(null, '', Dirty.hash); return; }
+    Dirty.on = false;
+  }
+  render();
+});
+window.addEventListener('beforeunload', (e) => { if (Dirty.on) { e.preventDefault(); e.returnValue = ''; } });
+
+let mapsToCleanup = [];
+async function render() {
+  mapsToCleanup.forEach(m => m.remove()); mapsToCleanup = [];
+  const app = $('#app');
+  if (!S.session) return renderLogin(app);
+  if (S.member === false) return renderNoAccess(app);
+  if (!S.data && !S.loadError) { app.innerHTML = `<div class="state"><span class="spinner"></span> טוען…</div>`; await reload(); }
+  if (S.loadError) return renderLoadError(app);
+  const r = parseRoute();
+  document.body.dataset.screen = r.name;
+  if (r.name !== 'form') Dirty.on = false;
+  if (r.name === 'home' && !APP.dashboard) return renderHome(app);
+  const inner = r.name === 'home' ? dashboardView() : r.name === 'matches' ? matchesView()
+    : r.name === 'list' ? listView(r.module, r.filter) : r.name === 'card' ? cardView(r.module, r.id) : formView(r);
+  app.innerHTML = shell(r, inner.html);
+  inner.mount?.();
+  window.scrollTo(0, 0);
+}
+
+function shell(r, html) {
+  const navLinks = (cls) => Object.entries(MODULES).map(([k, m]) =>
+    `<a class="${cls}" href="#/m/${k}" ${r.module === k ? 'aria-current="page"' : ''}>${m.title}</a>`).join('');
+  const bottom = r.name !== 'form';
+  // dashboard builds: "לוח עבודה" is the first destination; "+ חדש" outside a module asks which kind
+  const board = (cls) => APP.dashboard ? `<a class="${cls} nav-board" href="#/" ${['home', 'matches'].includes(r.name) ? 'aria-current="page"' : ''}>לוח עבודה</a>` : '';
+  const newBtn = r.module ? `<a class="nav-new" href="#/m/${r.module}/new">+ חדש</a>` : `<button type="button" class="nav-new" data-act="new-choice">+ חדש</button>`;
+  return `${demoBanner()}<div class="shell ${bottom ? 'has-bottom-nav' : ''}">
+    <nav class="side-nav" aria-label="מודולים">
+      <a href="#/" class="brand-side"><img src="${APP.logo}" alt="${APP.name} – לדף הבית" style="width:150px"></a>
+      ${board('mod')}${navLinks('mod')}
+      ${APP.dashboard && !r.module ? `<button type="button" class="btn primary side-new" data-act="new-choice">+ חדש</button>` : ''}
+      <div class="spacer"></div>
+      ${accountLinks()}
+    </nav>
+    <div class="main">${html}</div>
+    ${bottom ? `<nav class="bottom-nav" aria-label="מודולים">${board('')}${navLinks('').replace('</a><a', `</a>${newBtn}<a`)}</nav>` : ''}
+  </div>`;
+}
+// demo: no password change (the demo login is shared), "איפוס הדמו" instead
+const accountLinks = (sep = '') => APP.demo
+  ? `<button class="link" data-act="demo-reset">איפוס הדמו</button>${sep}<button class="link" data-act="logout">יציאה</button>`
+  : `<button class="link" data-act="password">שינוי סיסמה</button>${sep}<button class="link" data-act="logout">יציאה</button>`;
+const demoBanner = () => APP.demo ? `<p class="demo-banner" role="note">סביבת הדגמה – הנתונים נשמרים רק במכשיר הזה</p>` : '';
+const topbar = (title, backHref, backText = 'חזרה', action = '') => `<header class="topbar">
+  ${backHref ? `<a class="back" href="${backHref}">${backText}</a>` : ''}
+  <h1>${esc(title)}</h1>${action}
+  <a class="brand-mini" href="#/" aria-label="דף הבית"><img src="${APP.mark}" alt=""></a>
+</header>`;
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-act="logout"]');
+  if (b) { await DB.signOut(); S.session = null; S.data = null; S.member = null; location.hash = '#/'; render(); }
+  if (e.target.closest('[data-act="password"]')) passwordDialog();
+  if (e.target.closest('[data-act="new-choice"]')) newChoiceDialog();
+  if (e.target.closest('[data-act="demo-reset"]')) demoResetDialog();
+  // demo: the numbers are fictional, so calling / WhatsApp only explains
+  const fake = APP.demo && e.target.closest('a[href^="tel:"], a[href^="https://wa.me/"]');
+  if (fake) { e.preventDefault(); toast('בדמו לא מחייגים ולא שולחים – המספרים בדויים'); }
+});
+
+function newChoiceDialog() {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<h2>מה מוסיפים?</h2><div class="stack">
+    <a class="btn primary" href="#/m/lead/new">מתעניין חדש</a>
+    <a class="btn" href="#/m/owner/new">נכס חדש</a>
+    <button class="link" type="button" data-x>ביטול</button></div>`;
+  dlg.onclick = (e) => { if (e.target === dlg || e.target.closest('[data-x], a')) dlg.close(); };
+  dlg.showModal();
+}
+function demoResetDialog() {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<h2>איפוס הדמו</h2><p>כל השינויים שעשית יימחקו, ונתוני ההדגמה יחזרו למצב ההתחלתי.</p><div class="stack">
+    <button class="btn primary" type="button" data-yes>איפוס</button>
+    <button class="link" type="button" data-x>ביטול</button></div>`;
+  dlg.onclick = async (e) => {
+    if (e.target === dlg || e.target.closest('[data-x]')) return dlg.close();
+    if (!e.target.closest('[data-yes]')) return;
+    await DB.reset(); dlg.close(); Dirty.on = false; S.data = null; location.hash = '#/'; await render(); toast('הדמו אופס');
+  };
+  dlg.showModal();
+}
+
+/* ════════════ change password ════════════ */
+function passwordDialog() {
+  const dlg = $('#dlg');
+  dlg.onclick = null;
+  dlg.innerHTML = `<form id="pw-form" novalidate><h2>שינוי סיסמה</h2>
+    <div class="field" data-field="pw1"><label for="pw1">סיסמה חדשה</label>
+      <div class="pw"><input class="input" id="pw1" type="password" autocomplete="new-password" dir="ltr">
+      <button type="button" class="eye" aria-label="הצגת הסיסמה" aria-pressed="false">👁</button></div>
+      <p class="hint">לפחות 8 תווים</p><p class="err" id="pw1-err" aria-live="polite"></p></div>
+    <div class="field" data-field="pw2"><label for="pw2">שוב את הסיסמה החדשה</label>
+      <input class="input" id="pw2" type="password" autocomplete="new-password" dir="ltr">
+      <p class="err" id="pw2-err" aria-live="polite"></p></div>
+    <div class="stack"><button class="btn primary" type="submit">שמירת הסיסמה</button>
+      <button class="link" type="button" id="pw-cancel">ביטול</button></div></form>`;
+  const pw1 = $('#pw1'), pw2 = $('#pw2');
+  $('.eye', dlg).onclick = (e) => { const show = pw1.type === 'password'; pw1.type = pw2.type = show ? 'text' : 'password';
+    e.currentTarget.setAttribute('aria-pressed', show); e.currentTarget.setAttribute('aria-label', show ? 'הסתרת הסיסמה' : 'הצגת הסיסמה'); };
+  const checks = {
+    pw1: () => pw1.value.length >= 8 ? '' : 'הסיסמה צריכה להכיל לפחות 8 תווים',
+    pw2: () => pw2.value === pw1.value ? '' : 'הסיסמאות לא זהות',
+  };
+  const check = (id) => { const m = checks[id](); $(`#${id}-err`).textContent = m; dlg.querySelector(`[data-field=${id}]`).classList.toggle('invalid', !!m); return !m; };
+  [pw1, pw2].forEach(el => {
+    el.addEventListener('blur', () => { if (el.value) check(el.id); });
+    el.addEventListener('input', () => { if (dlg.querySelector(`[data-field=${el.id}]`).classList.contains('invalid')) check(el.id); });
+  });
+  $('#pw-cancel').onclick = () => dlg.close();
+  $('#pw-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const bad = ['pw1', 'pw2'].filter(id => !check(id));
+    if (bad.length) { $('#' + bad[0]).focus(); return; }
+    const btn = $('button[type=submit]', dlg); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> שומרת…';
+    try { await DB.changePassword(pw1.value); dlg.close(); toast('הסיסמה עודכנה. בפעם הבאה נכנסים עם הסיסמה החדשה.'); }
+    catch (ex) {
+      console.error(ex);
+      $('#pw1-err').textContent = /different|same/i.test(ex.message || '') ? 'הסיסמה החדשה צריכה להיות שונה מהנוכחית'
+        : /weak|short|characters/i.test(ex.message || '') ? 'הסיסמה חלשה מדי. נסי סיסמה ארוכה יותר.' : 'השמירה נכשלה. בדקי את החיבור ונסי שוב.';
+      btn.disabled = false; btn.textContent = 'שמירת הסיסמה';
+    }
+  };
+  dlg.showModal(); pw1.focus();
+}
+
+/* ════════════ login ════════════ */
+function renderLogin(app) {
+  document.body.dataset.screen = 'login';
+  app.innerHTML = `<main class="hero">
+    <form class="login-box" id="login" novalidate>
+      <img src="${APP.logo}" alt="${APP.logoAlt}">
+      <div class="field"><label for="email">אימייל</label>
+        <input class="input" id="email" type="email" inputmode="email" autocomplete="username" dir="ltr" required value="${esc(APP.demo?.email || '')}"></div>
+      <div class="field"><label for="password">סיסמה</label>
+        <div class="pw"><input class="input" id="password" type="password" autocomplete="current-password" dir="ltr" required value="${esc(APP.demo?.password || '')}">
+        <button type="button" class="eye" aria-label="הצגת הסיסמה" aria-pressed="false">👁</button></div></div>
+      <p class="err" id="login-err" aria-live="polite"></p>
+      <button class="btn primary block" type="submit">${APP.demo ? 'כניסה לדמו' : 'כניסה'}</button>
+      ${APP.demo ? '<p class="hint demo-hint">פרטי הכניסה לדמו כבר מולאו עבורך</p>' : ''}
+    </form>${APP.demo?.credit ? `<p class="credit">${esc(APP.demo.credit)}</p>` : ''}</main>`;
+  const pw = $('#password');
+  $('.eye').onclick = (e) => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password';
+    e.currentTarget.setAttribute('aria-pressed', show); e.currentTarget.setAttribute('aria-label', show ? 'הסתרת הסיסמה' : 'הצגת הסיסמה'); };
+  $('#login').onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $('#email').value.trim().toLowerCase(), err = $('#login-err'), btn = e.submitter || $('#login button[type=submit]');
+    if (!email || !pw.value) { err.textContent = 'יש למלא אימייל וסיסמה'; return; }
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> נכנסת…'; err.textContent = '';
+    try { await DB.signIn(email, pw.value); await afterLogin(); }
+    catch (ex) { console.error(ex); err.textContent = /invalid/i.test(ex.message || '') ? 'האימייל או הסיסמה שגויים' : 'הכניסה נכשלה. בדקי את החיבור ונסי שוב.'; btn.disabled = false; btn.textContent = APP.demo ? 'כניסה לדמו' : 'כניסה'; }
+  };
+}
+function renderNoAccess(app) {
+  app.innerHTML = `<main class="hero"><div class="login-box"><img src="${APP.logo}" alt="${APP.name}">
+    <p>החשבון הזה לא מורשה לצפות בנתונים.</p><button class="btn block" data-act="logout">יציאה</button></div></main>`;
+}
+function renderLoadError(app) {
+  app.innerHTML = `<main class="content"><div class="state"><p>לא הצלחנו לטעון את הנתונים. בדקי את החיבור לאינטרנט.</p>
+    <button class="btn primary" id="retry">נסי שוב</button></div></main>`;
+  $('#retry').onclick = async () => { S.data = null; S.loadError = null; render(); };
+}
+
+/* ════════════ home ════════════ */
+function renderHome(app) {
+  const count = (m) => deals(m).filter(d => d.status === 'active').length;
+  app.innerHTML = `<main class="hero">
+    <div class="hero-top">
+      <span class="hero-user">${accountLinks(' · ')}</span>
+      <img class="hero-logo" src="${APP.logo}" alt="${APP.name}">
+    </div>
+    <div class="home-buttons">
+      ${Object.entries(MODULES).map(([k, m]) => `<a class="home-btn" href="#/m/${k}">
+        <strong>${m.title}</strong><small><bdi class="num">${count(k)}</bdi> פעילות</small></a>`).join('')}
+    </div></main>`;
+}
+
+/* ════════════ list ════════════ */
+function dealSearchText(d) {
+  const c = d.contact || {};
+  return [c.name, c.company_name, c.phone, (c.phone || '').replace(/\D/g, ''), d.address].join(' ').toLowerCase();
+}
+function rowSummary(module, d) {
+  if (module === 'lead') return [optText(d.need_id), optText(d.purpose_id), fmt.size(d.size_value, d.size_unit)];
+  return [d.deal_kind === 'rent' ? 'השכרה' : 'מכירה', optText(d.purpose_id), fmt.size(d.built_sqm, 'sqm')];
+}
+const dealDate = (module, d) => module === 'lead' ? d.lead_date : String(d.created_at).slice(0, 10);
+
+function listView(module, filter = null) {
+  const st = S.list[module], M = MODULES[module];
+  const html = `${topbar(M.title, '', '', `<a class="btn primary new-top" href="#/m/${module}/new">+ חדש</a>`)}
+  <div class="content">
+    <input class="input search" id="q" type="search" placeholder="חיפוש: שם, טלפון, חברה, כתובת" value="${esc(st.q)}" aria-label="חיפוש">
+    ${filter ? `<p class="filter-chip"><span>מסונן: ${esc(filter.label)}</span><a href="#/m/${module}" aria-label="ביטול הסינון">✕</a></p>` : ''}
+    <div class="tabs" ${filter ? 'hidden' : ''}><div class="seg" role="radiogroup" aria-label="סינון">
+      <label><input type="radio" name="tab" value="active" ${st.tab === 'active' ? 'checked' : ''}><span>פעילות</span></label>
+      <label><input type="radio" name="tab" value="archive" ${st.tab === 'archive' ? 'checked' : ''}><span>ארכיון</span></label>
+    </div></div>
+    <ul class="list" id="rows"></ul>
+  </div>
+`;
+  const mount = () => {
+    const draw = () => {
+      const q = st.q.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+      // a search looks in all records (active + archive); without a search the tab filters
+      const rows = deals(module)
+        .filter(d => filter ? filter.test(d) : q || (st.tab === 'active') === (d.status === 'active'))
+        .filter(d => !q || dealSearchText(d).includes(q) || (qd.length >= 3 && dealSearchText(d).includes(qd)))
+        .sort((a, b) => (dealDate(module, b) + b.created_at).localeCompare(dealDate(module, a) + a.created_at));
+      const ul = $('#rows'); if (!ul) return; // list no longer on screen (e.g. undo from elsewhere)
+      if (!rows.length) {
+        ul.innerHTML = `<li class="state">${filter && !q ? 'אין רשומות פעילות בסינון הזה.' : q ? `לא נמצאו תוצאות ל־"${esc(st.q)}"` : st.tab === 'archive' ? 'אין עסקאות בארכיון.' : `${M.empty} לחצי על "+ חדש" כדי להוסיף.`}</li>`;
+        return;
+      }
+      ul.innerHTML = rows.map(d => `<li class="deal-row" data-id="${d.id}"><a href="#/m/${module}/${d.id}">
+        <div class="r1"><span><span class="name">${esc(d.contact?.name)}</span>${d.contact?.company_name ? ` · ${esc(d.contact.company_name)}` : ''}${d.status !== 'active' ? ' <span class="chip archived row-chip">ארכיון</span>' : ''}</span>
+        <span class="meta">${fmt.ltr(fmt.date(dealDate(module, d)))}</span></div>
+        <div class="meta">${rowSummary(module, d).filter(Boolean).map(esc).join(' · ')}</div></a>
+        ${d.status === 'active' ? '<button type="button" class="btn row-act" data-a="close">סגירת עסקה</button>'
+          : '<button type="button" class="btn row-act" data-a="restore">החזרה לפעילות</button>'}</li>`).join('');
+    };
+    // quick daily sweep: close / restore straight from the list, without leaving it or jumping to the top
+    $('#rows').onclick = async (e) => {
+      const b = e.target.closest('.row-act'); if (!b) return;
+      const d = findDeal(module, b.closest('li').dataset.id); if (!d) return;
+      if (b.dataset.a === 'close') return closeDialog(module, d, draw);
+      b.disabled = true;
+      try { await setStatusWithUndo(module, d, 'active', 'העסקה הוחזרה לפעילות', draw); }
+      catch (ex) { console.error(ex); toast('הפעולה נכשלה. נסי שוב.'); b.disabled = false; }
+    };
+    $('#q').oninput = (e) => { st.q = e.target.value; draw(); };
+    $$('input[name=tab]').forEach(r => r.onchange = () => { st.tab = r.value; draw(); });
+    draw();
+  };
+  return { html, mount };
+}
+
+/* ════════════ card ════════════ */
+function cardView(module, id) {
+  const d = findDeal(module, id), M = MODULES[module];
+  if (!d) return { html: `${topbar(M.one, `#/m/${module}`)}<div class="content state">העסקה לא נמצאה.</div>` };
+  const c = d.contact || {}, active = d.status === 'active';
+  const statusText = active ? 'פעילה' : d.status === 'closed' ? 'נסגרה' : 'לא רלוונטית';
+  const groups = { contact: [], property: [], location: [], money: [] };
+  let sec = 'contact';
+  const add = (k, v) => { if (v !== '' && v != null) groups[sec].push(`<dt>${k}</dt><dd>${v}</dd>`); };
+  add('טלפון', fmt.ltr(c.phone));
+  add('סוג', c.entity_type === 'company' ? 'חברה' : 'פרטי');
+  sec = 'property';
+  if (module === 'lead') {
+    add('תאריך פנייה', fmt.ltr(fmt.date(d.lead_date)));
+    add('צורך', esc(optText(d.need_id)));
+    add('ייעוד', esc(optText(d.purpose_id)));
+    add('גודל', fmt.bi(fmt.size(d.size_value, d.size_unit)));
+    add('גובה נדרש', fmt.bi(fmt.num(d.height_m) + ' מ׳'));
+    sec = 'location';
+    add('כתובת / אזור', esc(d.address));
+    add('רדיוס חיפוש', fmt.bi(fmt.num(d.radius_m / 1000) + ' ק״מ'));
+    sec = 'money';
+    add('תקציב', fmt.ltr(fmt.money(d.budget_value, d.budget_currency)) + (d.budget_kind === 'per_sqm' ? ' למ״ר' : ' סה״כ'));
+    add('נדרש עד', fmt.ltr(fmt.date(d.needed_by)));
+    add('הערות', esc(d.notes));
+  } else {
+    add('ייעוד', esc(optText(d.purpose_id)));
+    add('שטח בנוי', fmt.bi(fmt.size(d.built_sqm, 'sqm')));
+    add('שטח מגרש', fmt.bi(fmt.size(d.plot_sqm, 'sqm')));
+    add('תיאור', esc(d.description));
+    sec = 'location';
+    add('כתובת', esc(d.address));
+    sec = 'money';
+    add('סוג עסקה', d.deal_kind === 'rent' ? 'השכרה' : 'מכירה');
+    add('מחיר מבוקש / שווי', fmt.ltr(fmt.money(d.asking_price)));
+    if (d.deal_kind === 'rent') {
+      if (APP.dashboard && d.asking_rent) add('שכירות מבוקשת לחודש', fmt.ltr(fmt.money(d.asking_rent)));
+      add('מושכר כרגע', d.is_rented ? 'כן' : 'לא');
+      if (d.is_rented) { add('שכירות חודשית', fmt.ltr(fmt.money(d.monthly_rent))); add('תשואה', fmt.ltr(fmt.pct(d.yield_pct))); }
+    } else {
+      add('מחיר למ״ר מבוקש', fmt.ltr(fmt.money(d.asking_price / d.built_sqm)));
+      if (d.ai_price_per_sqm) add('הערכת מחיר למ״ר', fmt.ltr(fmt.money(d.ai_price_per_sqm)) + ' <small>(הערכה)</small>');
+    }
+  }
+  for (const f of fieldsOf(module)) {
+    const v = d.custom?.[f.key];
+    sec = sectionOf(f);
+    add(esc(f.label), v == null || v === '' ? '' : f.type === 'date' ? fmt.ltr(fmt.date(v)) : f.type === 'number' ? fmt.ltr(fmt.num(v)) : esc(v));
+  }
+  const rows = SECTIONS.flatMap(k => groups[k]);
+  const html = `${topbar(c.name || M.one, `#/m/${module}`)}
+  <div class="content">
+    <div class="card-head">
+      <span class="chip ${active ? 'active' : 'archived'}">${statusText}</span>
+      <h2>${esc(c.name)}</h2>${c.company_name ? `<p>${esc(c.company_name)}</p>` : ''}
+    </div>
+    <div class="actions">
+      <a class="btn primary" href="${Phone.tel(c.phone)}">חיוג</a>
+      <a class="btn" href="${Phone.wa(c.phone)}" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+    <dl class="dl">${rows.join('')}</dl>
+    <div id="card-map" class="map small" style="margin-top:16px" dir="ltr"></div>
+    ${APP.dashboard ? matchSection(module, d) : ''}
+    <div class="actions">
+      <a class="btn" href="#/m/${module}/${d.id}/edit">עריכה</a>
+      <a class="btn" href="#/m/${module}/new/dup/${d.id}">שכפול</a>
+      ${active ? `<button class="btn" id="close-deal">סגירת עסקה</button>` : `<button class="btn" id="restore-deal">החזרה לפעילות</button>`}
+    </div>
+  </div>`;
+  const mount = () => {
+    if (window.L) {
+      const m = L.map('card-map', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, keyboard: false, attributionControl: true })
+        .setView([d.lat, d.lng], module === 'lead' ? zoomForRadius(d.radius_m) : 15);
+      tiles().addTo(m); L.marker([d.lat, d.lng]).addTo(m);
+      if (module === 'lead') L.circle([d.lat, d.lng], { radius: d.radius_m, color: '#1A1A1A', weight: 2, fillColor: '#FFD400', fillOpacity: .25 }).addTo(m);
+      mapsToCleanup.push(m);
+    }
+    $('#close-deal')?.addEventListener('click', () => closeDialog(module, d));
+    $('#restore-deal')?.addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      try { await DB.setStatus(module, d.id, 'active'); await reload(); toast('העסקה הוחזרה לפעילות'); render(); }
+      catch (ex) { console.error(ex); toast('הפעולה נכשלה. נסי שוב.'); e.currentTarget.disabled = false; }
+    });
+  };
+  return { html, mount };
+}
+
+// change status, refresh, and offer "ביטול" that puts the previous status back
+async function setStatusWithUndo(module, d, status, msg, after) {
+  const prev = d.status;
+  await DB.setStatus(module, d.id, status); await reload(); after();
+  toast(msg, { label: 'ביטול', run: async () => {
+    try { await DB.setStatus(module, d.id, prev); await reload(); after(); toast('בוטל'); }
+    catch (ex) { console.error(ex); toast('הביטול נכשל. נסי שוב.'); }
+  } });
+}
+
+function closeDialog(module, d, after = render) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<h2>סגירת עסקה – מה הסיבה?</h2><div class="stack">
+    <button class="btn primary" data-s="closed">נסגרה</button>
+    <button class="btn" data-s="irrelevant">לא רלוונטית</button>
+    <button class="link" data-s="">ביטול</button></div>`;
+  dlg.onclick = async (e) => {
+    if (e.target === dlg) return dlg.close();
+    const b = e.target.closest('[data-s]'); if (!b) return;
+    if (!b.dataset.s) return dlg.close();
+    $$('button', dlg).forEach(x => x.disabled = true);
+    try { await setStatusWithUndo(module, d, b.dataset.s, 'העסקה עברה לארכיון', () => { dlg.close(); after(); }); }
+    catch (ex) { console.error(ex); $$('button', dlg).forEach(x => x.disabled = false); toast('הפעולה נכשלה. נסי שוב.'); }
+  };
+  dlg.showModal();
+}
+
+/* ════════════ option list editor ════════════ */
+const LIST_TITLES = { lead_need: 'צורך', lead_purpose: 'ייעוד – מתעניינים', owner_purpose: 'ייעוד – בעלים' };
+const optionUsage = (id) => ['lead', 'owner'].reduce((n, m) => n + deals(m).filter(d => d.need_id === id || d.purpose_id === id).length, 0);
+function optionsDialog(listKey, onDone) {
+  const dlg = $('#dlg');
+  const draw = () => {
+    const rows = opts(listKey);
+    dlg.innerHTML = `<h2>עריכת הרשימה: ${esc(LIST_TITLES[listKey] || '')}</h2>
+      <ul class="opt-rows">${rows.map(o => { const n = optionUsage(o.id); return `<li data-id="${o.id}" data-used="${n}">
+        <div class="add-inline"><input class="input" value="${esc(o.value)}" aria-label="שם הערך">
+          <button type="button" class="btn" data-a="save" hidden>שמירה</button>
+          <button type="button" class="link" data-a="remove">הסרה</button></div>
+        ${groupSelect(listKey, o)}
+        <p class="hint">${n ? `בשימוש ב-${n} רשומות` : 'לא בשימוש'}</p>
+        <p class="hint warn" hidden>${n ? `השינוי ישפיע על כל ${n} הרשומות שמשתמשות בערך הזה.` : ''}</p>
+        <div class="confirm" hidden><p class="hint">${n ? `הערך בשימוש ב-${n} רשומות. הן ישמרו אותו, אבל הוא לא יופיע יותר לבחירה.` : `להסיר את "${esc(o.value)}" מהרשימה?`}</p>
+          <div class="row"><button type="button" class="btn" data-a="remove-yes">הסרה מהרשימה</button><button type="button" class="link" data-a="remove-no">ביטול</button></div></div>
+        <p class="err" aria-live="polite"></p></li>`; }).join('') || '<li class="hint">הרשימה ריקה.</li>'}</ul>
+      <div class="stack"><button type="button" class="btn primary" data-a="close">סיום</button></div>`;
+  };
+  const replace = (row) => { const i = S.data.options.findIndex(o => o.id === row.id); if (i >= 0) S.data.options[i] = row; };
+  dlg.onchange = async (e) => {
+    const sel = e.target.closest('select[data-a=group]'); if (!sel) return;
+    const li = sel.closest('li[data-id]'); sel.disabled = true;
+    try { replace(await DB.updateOption(li.dataset.id, { match_group: sel.value || null })); toast('קבוצת ההתאמה עודכנה'); }
+    catch (ex) { console.error(ex); $('.err', li).textContent = 'הפעולה נכשלה. נסי שוב.'; }
+    sel.disabled = false;
+  };
+  dlg.oninput = (e) => {
+    const li = e.target.closest('li[data-id]'); if (!li || e.target.tagName === 'SELECT') return;
+    const o = S.data.options.find(x => x.id === li.dataset.id), changed = e.target.value.trim() !== o.value;
+    $('[data-a=save]', li).hidden = !changed;
+    $('.warn', li).hidden = !(changed && +li.dataset.used);
+  };
+  dlg.onclick = async (e) => {
+    if (e.target === dlg) { dlg.close(); return; }
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const li = b.closest('li[data-id]'), a = b.dataset.a;
+    if (a === 'close') return dlg.close();
+    const err = $('.err', li); err.textContent = '';
+    if (a === 'remove') { $('.confirm', li).hidden = false; b.hidden = true; return; }
+    if (a === 'remove-no') { $('.confirm', li).hidden = true; $('[data-a=remove]', li).hidden = false; return; }
+    b.disabled = true;
+    try {
+      if (a === 'save') {
+        const v = $('input', li).value.trim(); if (!v) { err.textContent = 'יש למלא שם'; b.disabled = false; return; }
+        replace(await DB.updateOption(li.dataset.id, { value: v })); toast(`השם עודכן ל-"${v}"`);
+      } else if (a === 'remove-yes') {
+        replace(await DB.updateOption(li.dataset.id, { hidden: true })); toast('הערך הוסר מהרשימה');
+      }
+      draw();
+    } catch (ex) {
+      console.error(ex);
+      err.textContent = ex?.code === '23505' || /duplicate/i.test(ex?.message || '') ? 'הערך הזה כבר קיים ברשימה' : 'הפעולה נכשלה. נסי שוב.';
+      b.disabled = false;
+    }
+  };
+  dlg.onclose = () => { dlg.onclose = null; dlg.oninput = null; dlg.onchange = null; onDone?.(); };
+  draw(); dlg.showModal();
+}
+
+/* ════════════ map helpers ════════════ */
+const tiles = () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
+const zoomForRadius = (r) => r > 12000 ? 10 : r > 6000 ? 11 : r > 2500 ? 12 : 13;
+
+// Search: Photon (komoot, free, tolerant of approximate text and spelling) limited to Israel;
+// if it finds nothing, Nominatim with normalized spelling. Nominatim: max 1 request/second, cached.
+const IL_BBOX = '34.2,29.4,35.95,33.4';
+const Geo = {
+  last: 0, cache: new Map(),
+  async wait() { const gap = Date.now() - this.last; if (gap < 1100) await new Promise(r => setTimeout(r, 1100 - gap)); this.last = Date.now(); },
+  uniq: (parts) => parts.filter((x, i, a) => x && a.indexOf(x) === i),
+  async photon(q) {
+    const res = await (await fetch(`https://photon.komoot.io/api/?limit=6&lang=default&bbox=${IL_BBOX}&q=${encodeURIComponent(q)}`)).json();
+    return (res.features || []).filter(f => f.properties?.countrycode === 'IL').map(f => {
+      const p = f.properties, street = p.street ? [p.street, p.housenumber].filter(Boolean).join(' ') : '';
+      const city = p.city || p.town || p.village || p.county || '';
+      return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0],
+        label: this.uniq([p.name || street, city]).join(', '),
+        full: this.uniq([p.name, street, p.district, city]).join(', ') };
+    });
+  },
+  async nominatim(q) {
+    await this.wait();
+    const res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=il&accept-language=he&q=${encodeURIComponent(q)}`)).json();
+    return res.map(r => ({ lat: +r.lat, lng: +r.lon, label: this.short(r), full: r.display_name }));
+  },
+  async search(q) {
+    const key = 's:' + q; if (this.cache.has(key)) return this.cache.get(key);
+    let res = [];
+    try { res = await this.photon(q); } catch (e) { console.error(e); }
+    if (!res.length) res = await this.nominatim(q.replace(/תעשיה/g, 'תעשייה'));
+    this.cache.set(key, res); return res;
+  },
+  async reverse(lat, lng) {
+    const key = `r:${lat.toFixed(5)},${lng.toFixed(5)}`; if (this.cache.has(key)) return this.cache.get(key);
+    await this.wait();
+    const u = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=he&zoom=18&lat=${lat}&lon=${lng}`;
+    const res = await (await fetch(u)).json(); this.cache.set(key, res); return res;
+  },
+  short(r) { const a = r.address || {}; const street = a.road ? [a.road, a.house_number].filter(Boolean).join(' ') : '';
+    const city = a.city || a.town || a.village || a.municipality || '';
+    const place = street || a.industrial || a.commercial || a.neighbourhood || a.quarter || a.suburb || r.name || '';
+    return this.uniq([place, city]).join(', ') || r.display_name; },
+};
+
+/* ════════════ form ════════════ */
+function field(id, label, control, { required = true, hint = '', cls = '' } = {}) {
+  return `<div class="field ${cls}" data-field="${id}">
+    <label for="${id}" ${control.startsWith('<div class="seg') ? `id="${id}-lbl"` : ''}>${label}${required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>
+    ${control}${hint ? `<p class="hint">${hint}</p>` : ''}<p class="err" id="${id}-err" aria-live="polite"></p></div>`;
+}
+const textInput = (id, v = '', a = '') => `<input class="input" id="${id}" name="${id}" value="${esc(v)}" ${a}>`;
+const numInput = (id, v, suffix = '', a = '') => `<div class="affix"><input class="input num" id="${id}" name="${id}" inputmode="decimal" dir="ltr" value="${v == null ? '' : esc(fmt.num(v))}" ${a}>${suffix ? `<span>${suffix}</span>` : ''}</div>`;
+const moneyInput = (id, v, cur = 'ILS') => numInput(id, v, CURRENCY[cur] || '₪', 'data-money');
+const dateInput = (id, v) => `<input class="input num" type="date" id="${id}" name="${id}" value="${esc(v || '')}">`;
+const seg = (name, choices, val) => `<div class="seg" role="radiogroup" aria-labelledby="${name}-lbl" id="${name}">${choices.map(([v, t]) =>
+  `<label><input type="radio" name="${name}" value="${v}" ${String(val) === String(v) ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>`;
+const optOptions = (listKey, val) => `<option value="">בחירה…</option>${opts(listKey, val).map(o =>
+  `<option value="${o.id}" ${o.id === val ? 'selected' : ''}>${esc(o.value)}</option>`).join('')}<option value="__new">+ חדש</option>`;
+const optSelect = (id, listKey, val) => `<select class="input" id="${id}" name="${id}" data-list="${listKey}">${optOptions(listKey, val)}</select>
+  <button type="button" class="link opt-edit" data-list="${listKey}">עריכת הרשימה</button>
+  <div class="add-inline" id="${id}-new" hidden><input class="input" aria-label="ערך חדש" placeholder="ערך חדש"><button type="button" class="btn">הוספה</button><button type="button" class="link">ביטול</button></div>`;
+
+function customControl(f, v) {
+  const id = 'cf_' + f.key;
+  if (f.type === 'number') return numInput(id, v);
+  if (f.type === 'date') return dateInput(id, v);
+  if (f.type === 'list') return `<select class="input" id="${id}" name="${id}"><option value="">—</option>${(f.options || []).map(o =>
+    `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  return textInput(id, v);
+}
+const customFieldHTML = (f, v) => field('cf_' + f.key, esc(f.label), customControl(f, v), { required: false });
+
+function formView(r) {
+  const { module, mode } = r, M = MODULES[module], isLead = module === 'lead';
+  const src = mode === 'new' ? null : findDeal(module, r.id);
+  if (mode !== 'new' && !src) return { html: `${topbar(M.one, `#/m/${module}`)}<div class="content state">העסקה לא נמצאה.</div>` };
+  const d = src ? structuredClone(src) : {};
+  const dealId = mode === 'edit' ? src.id : uuid();     // created once → retry-safe
+  if (mode === 'dup') { if (isLead) d.lead_date = todayISO(); d.status = 'active'; }
+  const c = d.contact || {};
+  const title = mode === 'edit' ? 'עריכת עסקה' : mode === 'dup' ? 'שכפול עסקה' : (isLead ? 'מתעניין חדש' : 'נכס חדש');
+  const back = mode === 'new' ? `#/m/${module}` : `#/m/${module}/${r.id}`;
+  const lat = d.lat ?? null, lng = d.lng ?? null;
+  // custom fields of one section + the "+ שדה חדש" link at its end
+  const cfBlock = (section) => `<div class="cf-list" data-section="${section}">${fieldsOf(module).filter(f => sectionOf(f) === section)
+    .map(f => customFieldHTML(f, d.custom?.[f.key])).join('')}</div>
+    <button type="button" class="link add-field" data-section="${section}">+ שדה חדש</button>`;
+
+  const leadProperty = `
+    ${field('lead_date', 'תאריך פנייה', dateInput('lead_date', d.lead_date || todayISO()))}
+    ${field('need_id', 'צורך', optSelect('need_id', LISTS.need, d.need_id))}
+    ${field('purpose_id', 'ייעוד', optSelect('purpose_id', LISTS.lead_purpose, d.purpose_id))}
+    ${field('size_value', 'גודל', `<div class="row">${numInput('size_value', d.size_value)}${seg('size_unit', [['sqm', 'מ״ר'], ['dunam', 'דונם']], d.size_unit || 'sqm')}</div>`)}
+    ${field('height_m', 'גובה נדרש', numInput('height_m', d.height_m, 'מ׳'), { hint: 'גובה תקרה מינימלי במטרים' })}`;
+  const ownerProperty = `
+    ${field('purpose_id', 'ייעוד', optSelect('purpose_id', LISTS.owner_purpose, d.purpose_id))}
+    <div class="row">${field('built_sqm', 'שטח בנוי', numInput('built_sqm', d.built_sqm, 'מ״ר'))}${field('plot_sqm', 'שטח מגרש', numInput('plot_sqm', d.plot_sqm, 'מ״ר'))}</div>
+    ${field('description', 'תיאור הנכס', `<textarea class="input" id="description" name="description">${esc(d.description)}</textarea>`, { required: false })}`;
+  const locSection = `
+    ${field('address', isLead ? 'כתובת / אזור' : 'כתובת', `<div class="add-inline geo-box" style="margin:0">
+        <input class="input" id="address" name="address" type="search" autocomplete="off" enterkeyhint="search" placeholder="למשל: אזור התעשייה, קריית גת" value="${esc(d.address)}">
+        <button type="button" class="btn" id="geo-go">חיפוש</button></div>
+      <ul class="geo-results" id="geo-results" aria-live="polite"></ul>`,
+      { required: !isLead, hint: 'הקלידי כתובת או אזור ובחרי מהרשימה, או הקישי על המפה' })}
+    ${field('pin', 'מיקום על המפה', `<div id="form-map" class="map" dir="ltr"></div>`, { hint: 'הקשה על המפה מציבה סיכה וממלאת את הכתובת' })}
+    ${isLead ? `<div class="range-row"><label for="radius" style="font-weight:700">רדיוס</label>
+      <input type="range" id="radius" min="500" max="20000" step="500" value="${d.radius_m || 5000}">
+      <output id="radius-out" class="num"></output></div>` : ''}`;
+  const leadMoney = `
+    ${field('budget_value', 'תקציב', `<div class="row">${moneyInput('budget_value', d.budget_value, d.budget_currency || 'ILS')}${seg('budget_currency', [['ILS', 'ש״ח'], ['USD', '$']], d.budget_currency || 'ILS')}</div>
+      <div class="row" style="margin-top:8px">${seg('budget_kind', [['total', 'סה״כ'], ['per_sqm', 'למ״ר']], d.budget_kind || 'total')}</div>`)}
+    ${field('needed_by', 'נדרש עד', dateInput('needed_by', d.needed_by))}
+    ${field('notes', 'הערות', `<textarea class="input" id="notes" name="notes">${esc(d.notes)}</textarea>`, { required: false })}`;
+  const ownerMoney = `
+    ${field('deal_kind', 'סוג עסקה', seg('deal_kind', [['rent', 'השכרה'], ['sale', 'מכירה']], d.deal_kind))}
+    ${field('asking_price', 'מחיר מבוקש / שווי הנכס', moneyInput('asking_price', d.asking_price))}
+    <div id="rent-block" hidden>
+      ${APP.dashboard ? field('asking_rent', 'שכירות מבוקשת לחודש', moneyInput('asking_rent', d.asking_rent), { required: false, hint: 'כדי לבדוק התאמה לתקציב של מי שמחפש לשכור' }) : ''}
+      ${field('is_rented', 'האם המבנה מושכר כרגע?', seg('is_rented', [['true', 'כן'], ['false', 'לא']], d.is_rented))}
+      <div id="rented-block" hidden>
+        ${field('monthly_rent', 'שכירות חודשית (₪)', moneyInput('monthly_rent', d.monthly_rent))}
+        <div class="calc" id="yield" aria-live="polite"></div>
+      </div>
+    </div>
+    <div id="sale-block" hidden><div class="calc" id="sale-calc" aria-live="polite"></div></div>`;
+
+  const html = `${topbar(title, back)}
+  <form class="content" id="deal-form" novalidate>
+    <section class="form-section"><h2>פרטי לקוח</h2>
+      ${field('phone', 'טלפון נייד', `<input class="input num" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="050-0000000" value="${esc(c.phone)}">`)}
+      <p class="note" id="existing-note" hidden aria-live="polite">לקוח קיים – אין צורך למלא שוב פרטים</p>
+      ${field('name', 'שם', textInput('name', c.name, 'autocomplete="name"'))}
+      ${field('entity_type', 'פרטי / חברה', seg('entity_type', [['private', 'פרטי'], ['company', 'חברה']], c.entity_type || 'private'))}
+      ${field('company_name', 'שם החברה', textInput('company_name', c.company_name, 'autocomplete="organization"'), { cls: 'company-only' })}
+      ${cfBlock('contact')}
+    </section>
+    <section class="form-section"><h2>הנכס</h2>${isLead ? leadProperty : ownerProperty}${cfBlock('property')}</section>
+    <section class="form-section"><h2>מיקום</h2>${locSection}${cfBlock('location')}</section>
+    <section class="form-section"><h2>כסף ותזמון</h2>${isLead ? leadMoney : ownerMoney}${cfBlock('money')}</section>
+      <div id="new-field" hidden class="form-section" style="margin-top:8px">
+        ${field('nf_label', 'שם השדה', textInput('nf_label', '', 'placeholder="למשל: קומה"'))}
+        ${field('nf_type', 'סוג', `<select class="input" id="nf_type"><option value="text">טקסט</option><option value="number">מספר</option><option value="date">תאריך</option><option value="list">רשימה</option></select>`)}
+        ${field('nf_options', 'ערכים לבחירה', textInput('nf_options', '', 'placeholder="מופרדים בפסיק: א, ב, ג"'), { cls: 'nf-list-only' })}
+        <div class="row"><button type="button" class="btn primary" id="nf_save">הוספת השדה</button><button type="button" class="link" id="nf_cancel">ביטול</button></div>
+      </div>
+    <div class="sticky-save"><button class="btn primary block" type="submit" id="save">שמירה</button></div>
+  </form>`;
+
+  const mount = () => mountForm({ module, mode, dealId, src, lat, lng, back });
+  return { html, mount };
+}
+
+function mountForm({ module, mode, dealId, lat, lng }) {
+  const form = $('#deal-form'), isLead = module === 'lead';
+  Dirty.on = false; Dirty.hash = location.hash;
+  form.addEventListener('input', () => { Dirty.on = true; });
+  form.addEventListener('change', () => { Dirty.on = true; });
+  const val = (id) => form.elements[id]?.value ?? '';
+  const radio = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value ?? '';
+  const pin = { lat, lng };
+  const touched = new Set();
+
+  /* visibility */
+  const sync = () => {
+    $$('.company-only', form).forEach(el => el.hidden = radio('entity_type') !== 'company');
+    if (!isLead) {
+      const kind = radio('deal_kind');
+      $('#rent-block').hidden = kind !== 'rent';
+      $('#sale-block').hidden = kind !== 'sale';
+      $('#rented-block').hidden = !(kind === 'rent' && radio('is_rented') === 'true');
+      const price = parseNum(val('asking_price')), rent = parseNum(val('monthly_rent')), built = parseNum(val('built_sqm'));
+      $('#yield').textContent = price && rent ? `תשואה: ${fmt.pct(rent * 12 / price * 100)}` : 'תשואה: מלאי מחיר ושכירות';
+      const est = estimatePricePerSqm($('#purpose_id').selectedOptions[0]?.textContent, built);
+      $('#sale-calc').innerHTML = `<div>מחיר למ״ר מבוקש: ${price && built ? fmt.ltr(fmt.money(price / built)) : '—'}</div>
+        <div>הערכת מחיר למ״ר: ${est ? fmt.ltr(fmt.money(est)) : '—'} <small>(הערכה)</small></div>`;
+    }
+  };
+
+  /* validation */
+  const rules = {
+    phone: () => Phone.normalize(val('phone')) ? '' : Phone.error,
+    name: () => val('name').trim() ? '' : 'יש למלא שם',
+    company_name: () => radio('entity_type') !== 'company' || val('company_name').trim() ? '' : 'יש למלא שם חברה',
+    pin: () => pin.lat != null ? '' : 'יש לבחור מיקום על המפה',
+    purpose_id: () => val('purpose_id') && val('purpose_id') !== '__new' ? '' : 'יש לבחור ייעוד',
+  };
+  const posNum = (id, msg) => rules[id] = () => (parseNum(val(id)) > 0 ? '' : msg);
+  if (isLead) {
+    rules.lead_date = () => val('lead_date') ? '' : 'יש לבחור תאריך';
+    rules.need_id = () => val('need_id') && val('need_id') !== '__new' ? '' : 'יש לבחור צורך';
+    posNum('size_value', 'יש למלא גודל');
+    posNum('height_m', 'יש למלא גובה');
+    posNum('budget_value', 'יש למלא תקציב');
+    rules.needed_by = () => val('needed_by') ? '' : 'יש לבחור תאריך';
+  } else {
+    posNum('built_sqm', 'יש למלא שטח בנוי');
+    posNum('plot_sqm', 'יש למלא שטח מגרש');
+    rules.address = () => val('address').trim() ? '' : 'יש למלא כתובת';
+    rules.deal_kind = () => radio('deal_kind') ? '' : 'יש לבחור השכרה או מכירה';
+    posNum('asking_price', 'יש למלא מחיר');
+    rules.is_rented = () => radio('deal_kind') !== 'rent' || radio('is_rented') ? '' : 'יש לבחור כן או לא';
+    rules.monthly_rent = () => radio('deal_kind') !== 'rent' || radio('is_rented') !== 'true' || parseNum(val('monthly_rent')) > 0 ? '' : 'יש למלא שכירות חודשית';
+  }
+  const check = (id) => {
+    const wrap = form.querySelector(`[data-field="${id}"]`); if (!wrap || !rules[id]) return true;
+    if (wrap.hidden || wrap.closest('[hidden]')) { wrap.classList.remove('invalid'); $(`#${id}-err`).textContent = ''; return true; }
+    const msg = rules[id]();
+    wrap.classList.toggle('invalid', !!msg); $(`#${id}-err`).textContent = msg;
+    form.elements[id]?.setAttribute?.('aria-invalid', msg ? 'true' : 'false');
+    return !msg;
+  };
+  const fieldIdOf = (el) => el.closest('[data-field]')?.dataset.field;
+  form.addEventListener('focusout', (e) => { const id = fieldIdOf(e.target); if (id && !id.startsWith('nf_')) { touched.add(id); check(id); } });
+  form.addEventListener('input', (e) => {
+    const id = fieldIdOf(e.target);
+    if (e.target.dataset.money !== undefined) { /* keep digits while typing */ }
+    if (id && form.querySelector(`[data-field="${id}"]`)?.classList.contains('invalid')) check(id);
+    sync();
+  });
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'budget_currency') $('#budget_value').nextElementSibling.textContent = CURRENCY[e.target.value];
+    const id = fieldIdOf(e.target); sync(); if (id && touched.has(id)) check(id);
+    if (e.target.type === 'radio') { touched.add(id); check(id); } });
+  // format numbers on blur
+  form.addEventListener('focusout', (e) => { if (e.target.classList?.contains('num') && e.target.inputMode === 'decimal') {
+    const n = parseNum(e.target.value); e.target.value = n == null ? '' : fmt.num(n); } });
+
+  /* phone first: existing contact prefill */
+  const phoneEl = $('#phone');
+  let lastPhone = Phone.normalize(phoneEl.value);
+  phoneEl.addEventListener('blur', async () => {
+    const p = Phone.normalize(phoneEl.value);
+    if (!p) return;
+    phoneEl.value = p;
+    if (p === lastPhone) return;
+    lastPhone = p;
+    try {
+      const c = await DB.findContact(p);
+      if (Phone.normalize(phoneEl.value) !== p || !document.body.contains(phoneEl)) return; // stale answer: phone changed meanwhile
+      $('#existing-note').hidden = !c;
+      if (c) {
+        form.elements.name.value = c.name;
+        form.querySelector(`input[name="entity_type"][value="${c.entity_type}"]`).checked = true;
+        form.elements.company_name.value = c.company_name || '';
+        ['name', 'company_name'].forEach(id => { if (touched.has(id) || form.querySelector(`[data-field="${id}"]`).classList.contains('invalid')) check(id); });
+        sync();
+      }
+    } catch (ex) { console.error(ex); }
+  });
+
+  /* "+ חדש" in dropdowns */
+  $$('select[data-list]', form).forEach(sel => {
+    const box = $(`#${sel.id}-new`), inp = $('input', box), [addBtn, cancelBtn] = $$('button', box);
+    let prev = sel.value === '__new' ? '' : sel.value;
+    sel.addEventListener('change', () => {
+      if (sel.value === '__new') { box.hidden = false; inp.value = ''; inp.focus(); }
+      else { prev = sel.value; box.hidden = true; }
+    });
+    const add = async () => {
+      const v = inp.value.trim(); if (!v) { inp.focus(); return; }
+      addBtn.disabled = true;
+      try {
+        const row = await DB.addOption(sel.dataset.list, v);
+        if (!S.data.options.some(o => o.id === row.id)) S.data.options.push(row);
+        if (!sel.querySelector(`option[value="${row.id}"]`)) {
+          const o = new Option(row.value, row.id); sel.insertBefore(o, sel.querySelector('option[value="__new"]'));
+        }
+        sel.value = row.id; prev = row.id; box.hidden = true; check(sel.id); sync(); toast(`"${row.value}" נוסף לרשימה`);
+      } catch (ex) { console.error(ex); toast('ההוספה נכשלה. נסי שוב.'); }
+      addBtn.disabled = false;
+    };
+    addBtn.onclick = add;
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    cancelBtn.onclick = () => { sel.value = prev; box.hidden = true; sel.focus(); };
+  });
+
+  /* "עריכת הרשימה": rename / remove (hide) values */
+  const refreshSelects = (listKey) => $$(`select[data-list="${listKey}"]`, form).forEach(sel => {
+    const cur = sel.value === '__new' ? '' : sel.value; sel.innerHTML = optOptions(listKey, cur); sel.value = cur;
+  });
+  $$('.opt-edit', form).forEach(b => b.onclick = () => optionsDialog(b.dataset.list, () => refreshSelects(b.dataset.list)));
+
+  /* map */
+  let map, marker, circle;
+  const radiusEl = $('#radius');
+  const radiusLabel = () => { if (radiusEl) $('#radius-out').textContent = `${fmt.num(radiusEl.value / 1000)} ק״מ`; };
+  radiusLabel();
+  const addrEl = $('#address');
+  let addressAuto = !addrEl.value;
+  const place = async (latlng, { fromSearch, label } = {}) => {
+    pin.lat = latlng.lat; pin.lng = latlng.lng;
+    if (map) {
+      if (!marker) marker = L.marker(latlng).addTo(map); else marker.setLatLng(latlng);
+      if (radiusEl) { if (!circle) circle = L.circle(latlng, { radius: +radiusEl.value, color: '#1A1A1A', weight: 2, fillColor: '#FFD400', fillOpacity: .25 }).addTo(map); else circle.setLatLng(latlng); }
+    }
+    check('pin');
+    if (fromSearch && label) { addrEl.value = label; addressAuto = true; check('address'); }
+    else if (!fromSearch && (addressAuto || !addrEl.value.trim())) {
+      try {
+        const r = await Geo.reverse(pin.lat, pin.lng);
+        if (r && !r.error && pin.lat === latlng.lat && pin.lng === latlng.lng) { addrEl.value = Geo.short(r); addressAuto = true; check('address'); Dirty.on = true; }
+      } catch (ex) { console.error(ex); }
+    }
+  };
+  if (window.L) {
+    map = L.map('form-map').setView(lat != null ? [lat, lng] : MAP_CENTER, lat != null ? (isLead ? zoomForRadius(+radiusEl.value) : 15) : 12);
+    tiles().addTo(map); mapsToCleanup.push(map);
+    if (lat != null) place({ lat, lng }, { fromSearch: true });
+    map.on('click', (e) => place(e.latlng));
+  } else {
+    $('#form-map').innerHTML = '<p class="state">המפה לא נטענה. בדקי את החיבור לאינטרנט.</p>';
+  }
+  radiusEl?.addEventListener('input', () => { radiusLabel(); circle?.setRadius(+radiusEl.value); });
+  radiusEl?.addEventListener('change', () => { if (circle && map) map.fitBounds(circle.getBounds(), { padding: [10, 10] }); });
+
+  // one field: typing shows suggestions (debounced), Enter / "חיפוש" searches now, picking one places the pin
+  let geoSeq = 0, geoTimer;
+  const geoSearch = async (explicit) => {
+    const q = addrEl.value.trim(), ul = $('#geo-results'), seq = ++geoSeq;
+    if (q.length < 3) { ul.innerHTML = explicit ? '<li class="hint" style="padding:8px">יש להקליד לפחות 3 תווים</li>' : ''; return; }
+    ul.innerHTML = '<li class="hint" style="padding:8px"><span class="spinner"></span> מחפשת…</li>';
+    try {
+      const res = await Geo.search(q);
+      if (seq !== geoSeq) return; // a newer search started
+      ul.innerHTML = res.length ? res.map((r, i) => `<li><button type="button" data-i="${i}">${esc(r.full || r.label)}</button></li>`).join('')
+        : '<li class="hint" style="padding:8px">לא נמצאה כתובת. נסי לכתוב אחרת, או הקישי על המפה.</li>';
+      $$('button', ul).forEach(b => b.onclick = () => {
+        const r = res[b.dataset.i];
+        ul.innerHTML = ''; place({ lat: r.lat, lng: r.lng }, { fromSearch: true, label: r.label });
+        map?.setView([r.lat, r.lng], isLead ? zoomForRadius(+radiusEl.value) : 16);
+      });
+    } catch (ex) { console.error(ex); if (seq === geoSeq) ul.innerHTML = '<li class="hint" style="padding:8px">החיפוש נכשל. נסי שוב או הקישי על המפה.</li>'; }
+  };
+  addrEl.addEventListener('input', () => { addressAuto = false; clearTimeout(geoTimer); geoTimer = setTimeout(() => geoSearch(false), 700); });
+  $('#geo-go').onclick = () => { clearTimeout(geoTimer); geoSearch(true); };
+  addrEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(geoTimer); geoSearch(true); } });
+
+  /* + שדה חדש */
+  const nf = $('#new-field');
+  const nfSync = () => $$('.nf-list-only', nf).forEach(el => el.hidden = $('#nf_type').value !== 'list');
+  const nfClose = () => { nf.hidden = true; $$('.add-field', form).forEach(b => b.hidden = false); };
+  $$('.add-field', form).forEach(b => b.onclick = () => {
+    nfClose(); b.after(nf); nf.dataset.section = b.dataset.section;
+    nf.hidden = false; b.hidden = true; nfSync(); $('#nf_label').focus();
+  });
+  $('#nf_type').onchange = nfSync;
+  $('#nf_cancel').onclick = nfClose;
+  $('#nf_save').onclick = async (e) => {
+    const label = $('#nf_label').value.trim(), type = $('#nf_type').value;
+    const options = type === 'list' ? $('#nf_options').value.split(',').map(s => s.trim()).filter(Boolean) : [];
+    $('#nf_label-err').textContent = label ? '' : 'יש למלא שם שדה';
+    $('#nf_options-err').textContent = type === 'list' && !options.length ? 'יש למלא לפחות ערך אחד' : '';
+    if (!label || (type === 'list' && !options.length)) return;
+    e.currentTarget.disabled = true;
+    try {
+      const sort = (fieldsOf(module).at(-1)?.sort || 0) + 10;
+      const section = nf.dataset.section || 'money';
+      const f = await DB.addField({ module, label, type, options, sort, section });
+      S.data.fields.push(f);
+      form.querySelector(`.cf-list[data-section="${section}"]`).insertAdjacentHTML('beforeend', customFieldHTML(f, ''));
+      nfClose(); $('#nf_label').value = ''; $('#nf_options').value = '';
+      $('#cf_' + f.key).focus(); toast(`השדה "${f.label}" נוסף`);
+    } catch (ex) { console.error(ex); toast('הוספת השדה נכשלה. נסי שוב.'); }
+    e.currentTarget.disabled = false;
+  };
+
+  sync();
+
+  /* save */
+  let saving = false;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    const ids = Object.keys(rules);
+    const bad = ids.filter(id => !check(id));
+    if (bad.length) {
+      const order = $$('[data-field]', form).map(el => el.dataset.field);
+      const first = order.find(id => bad.includes(id));
+      const wrap = form.querySelector(`[data-field="${first}"]`);
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (wrap.querySelector('input:not([type=radio]),select,textarea') || wrap.querySelector('input'))?.focus({ preventScroll: true });
+      return;
+    }
+    const custom = {};
+    for (const f of fieldsOf(module)) {
+      const v = val('cf_' + f.key);
+      if (v !== '' && v != null) custom[f.key] = f.type === 'number' ? parseNum(v) : v;
+    }
+    const contact = { phone: Phone.normalize(val('phone')), name: val('name').trim(), entity_type: radio('entity_type'),
+      company_name: radio('entity_type') === 'company' ? val('company_name').trim() : null };
+    let p;
+    if (isLead) {
+      p = { id: dealId, contact, lead_date: val('lead_date'), need_id: val('need_id'), purpose_id: val('purpose_id'),
+        size_value: parseNum(val('size_value')), size_unit: radio('size_unit'), lat: pin.lat, lng: pin.lng,
+        radius_m: +radiusEl.value, height_m: parseNum(val('height_m')), notes: val('notes').trim() || null,
+        budget_value: parseNum(val('budget_value')), budget_kind: radio('budget_kind'), budget_currency: radio('budget_currency') || 'ILS',
+        needed_by: val('needed_by'), address: val('address').trim() || null, custom };
+    } else {
+      const kind = radio('deal_kind'), rented = kind === 'rent' ? radio('is_rented') === 'true' : null;
+      p = { id: dealId, contact, purpose_id: val('purpose_id'), built_sqm: parseNum(val('built_sqm')), plot_sqm: parseNum(val('plot_sqm')),
+        lat: pin.lat, lng: pin.lng, address: val('address').trim(), description: val('description').trim() || null, deal_kind: kind,
+        asking_price: parseNum(val('asking_price')), is_rented: rented, monthly_rent: rented ? parseNum(val('monthly_rent')) : null,
+        ai_price_per_sqm: kind === 'sale' ? estimatePricePerSqm($('#purpose_id').selectedOptions[0]?.textContent, parseNum(val('built_sqm'))) : null,
+        custom };
+      // sent only by dashboard builds: the live database gets this column with supabase/003_dashboard.sql
+      if (APP.dashboard) p.asking_rent = kind === 'rent' ? parseNum(val('asking_rent')) : null;
+    }
+    saving = true;
+    const btn = $('#save'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> שומרת…';
+    try {
+      await DB.saveDeal(module, p);
+      await reload();
+      Dirty.on = false;
+      toast(mode === 'edit' ? 'השינויים נשמרו' : 'העסקה נשמרה');
+      go(`#/m/${module}/${dealId}`);
+    } catch (ex) {
+      console.error(ex);
+      const msg = ex?.message?.includes('10 ספרות') ? Phone.error : 'השמירה נכשלה. בדקי את החיבור ונסי שוב – כל מה שהוקלד נשמר בטופס.';
+      toast(msg);
+      saving = false; btn.disabled = false; btn.textContent = 'שמירה';
+    }
+  };
+}
+
+/* ════════════ dashboard (APP.dashboard builds only) ════════════ */
+// Purpose groups and transaction codes live in option_lists.match_group, so renaming a value never breaks matching.
+const MATCH_GROUPS = { storage: 'אחסנה ולוגיסטיקה', industry: 'תעשייה', commerce: 'מסחר וחנויות', offices: 'משרדים', land: 'קרקע / פרטי' };
+const NEED_GROUPS = { rent: 'מחפש לשכור', buy: 'מחפש לקנות', invest: 'משקיע' };
+const NEED_TO_KIND = { rent: 'rent', buy: 'sale', invest: 'sale' };
+const USD_RATE = 3.7; // fixed demo rate, always stated on the chip
+function groupSelect(listKey, o) {
+  if (!APP.dashboard) return '';
+  const groups = listKey === 'lead_need' ? NEED_GROUPS : MATCH_GROUPS;
+  const label = listKey === 'lead_need' ? 'סוג עסקה להתאמה' : 'קבוצת התאמה';
+  return `<label class="group-pick"><span>${label}:</span><select class="input" data-a="group" aria-label="${label}">
+    <option value="">ללא – לא נכלל בהתאמות</option>${Object.entries(groups).map(([k, v]) =>
+    `<option value="${k}" ${o.match_group === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+}
+const optGroup = (id) => (S.data?.options || []).find(o => o.id === id)?.match_group || null;
+
+// Nearest city from a fixed list: display and supply/demand only (matching uses real distance).
+const CITIES = [
+  ['קריית גת', 31.610, 34.770], ['אשקלון', 31.668, 34.574], ['אשדוד', 31.800, 34.650], ['באר שבע', 31.252, 34.791],
+  ['שדרות', 31.525, 34.596], ['נתיבות', 31.420, 34.588], ['אופקים', 31.314, 34.620], ['קריית מלאכי', 31.730, 34.745],
+  ['רחובות', 31.894, 34.811], ['יבנה', 31.877, 34.739], ['גדרה', 31.813, 34.778], ['ראשון לציון', 31.964, 34.804],
+  ['חולון', 32.016, 34.780], ['בת ים', 32.017, 34.750], ['תל אביב', 32.080, 34.781], ['פתח תקווה', 32.087, 34.887],
+  ['ראש העין', 32.096, 34.957], ['מודיעין', 31.898, 35.010], ['רמלה', 31.928, 34.866], ['לוד', 31.951, 34.888],
+  ['בית שמש', 31.747, 34.988], ['ירושלים', 31.778, 35.215], ['נתניה', 32.321, 34.853], ['חדרה', 32.434, 34.919],
+  ['חיפה', 32.794, 34.990], ['דימונה', 31.069, 35.033], ['ערד', 31.259, 35.212], ['אילת', 29.558, 34.952],
+];
+function distKm(a, b) {
+  const R = 6371, rad = Math.PI / 180, dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function cityOf(d) {
+  let best = null, bd = Infinity;
+  for (const [name, lat, lng] of CITIES) { const k = distKm([d.lat, d.lng], [lat, lng]); if (k < bd) { bd = k; best = name; } }
+  return bd <= 12 ? best : 'אחר';
+}
+
+/* Match one lead with one property. Returns null when it does not match at all.
+   Gates: both active, transaction (lead_need group ↔ deal_kind), same purpose group.
+   Location 40 / size 30 / budget 30. Each dimension: full, "near" (half) or out (no match).
+   More than one "near" → no match; exactly one → "כמעט מתאים". Missing asking rent → budget 0 and at most "טובה". */
+function matchPair(lead, owner) {
+  if (lead.status !== 'active' || owner.status !== 'active') return null;
+  const need = optGroup(lead.need_id);
+  if (!NEED_TO_KIND[need] || owner.deal_kind !== NEED_TO_KIND[need]) return null;
+  const g = optGroup(lead.purpose_id);
+  if (!g || g !== optGroup(owner.purpose_id)) return null;
+  const chips = []; let near = 0, score = 0;
+  // location
+  const km = distKm([lead.lat, lead.lng], [owner.lat, owner.lng]), r = lead.radius_m / 1000;
+  const kmText = fmt.num(Math.round(km * 10) / 10);
+  if (km <= r) { score += 40; chips.push({ t: km < 0.5 ? 'בתוך האזור' : `${kmText} ק״מ מהמרכז`, k: 'ok' }); }
+  else if (km <= r * 1.5) { score += 20; near++; chips.push({ t: `${kmText} ק״מ – מחוץ לרדיוס`, k: 'near' }); }
+  else return null;
+  // size (land / private → plot area, everything else → built area)
+  const want = lead.size_value * (lead.size_unit === 'dunam' ? 1000 : 1);
+  const have = g === 'land' ? owner.plot_sqm : owner.built_sqm;
+  const diff = Math.round((have / want - 1) * 1000) / 1000, pct = Math.round(Math.abs(diff) * 100); // rounded: 1300/1000 is exactly +30%
+  const sizeText = pct < 3 ? 'שטח מדויק' : diff > 0 ? `גדול ב-${pct}%` : `קטן ב-${pct}%`;
+  if (diff >= -0.10 && diff <= 0.30) { score += 30; chips.push({ t: sizeText, k: 'ok' }); }
+  else if (diff >= -0.25 && diff <= 0.60) { score += 15; near++; chips.push({ t: sizeText, k: 'near' }); }
+  else return null;
+  // budget, in ₪ (USD at a fixed rate)
+  const budget = lead.budget_value * (lead.budget_currency === 'USD' ? USD_RATE : 1);
+  const total = owner.deal_kind === 'rent' ? owner.asking_rent : owner.asking_price;
+  const price = total ? (lead.budget_kind === 'per_sqm' ? total / owner.built_sqm : total) : null;
+  const usd = lead.budget_currency === 'USD' ? ` (לפי $1 = ₪${USD_RATE})` : '';
+  let missing = false;
+  if (price == null) { missing = true; chips.push({ t: 'חסרה שכירות מבוקשת', k: 'warn' }); }
+  else if (price <= budget * 1.0001) { score += 30; chips.push({ t: 'בתקציב' + usd, k: 'ok' }); }
+  else if (price <= budget * 1.15) { score += 15; near++; chips.push({ t: `מעל התקציב ב-${Math.round((price / budget - 1) * 100)}%${usd}`, k: 'near' }); }
+  else return null;
+  if (near > 1) return null;
+  let level = score >= 80 ? 'high' : score >= 60 ? 'good' : 'possible';
+  if (missing && level === 'high') level = 'good';
+  return { lead, owner, score, level, near: near === 1, chips };
+}
+const LEVELS = { high: 'התאמה גבוהה', good: 'התאמה טובה', possible: 'התאמה אפשרית' };
+function allMatches() {
+  const out = [];
+  for (const l of deals('lead')) for (const o of deals('owner')) { const m = matchPair(l, o); if (m) out.push(m); }
+  return out.sort((a, b) => a.near - b.near || b.score - a.score);
+}
+const matchesFor = (module, d) => (module === 'lead'
+  ? deals('owner').map(o => matchPair(d, o)) : deals('lead').map(l => matchPair(l, d))).filter(Boolean)
+  .sort((a, b) => b.score - a.score);
+
+const chipsHTML = (m) => `<span class="chips">${m.chips.map(c => `<span class="mchip ${c.k}">${esc(c.t)}</span>`).join('')}</span>`;
+function matchItem(m, side) {
+  const other = side === 'owner' ? m.owner : m.lead;
+  const title = side === 'owner'
+    ? `${optText(other.purpose_id)} · ${fmt.size(other.built_sqm, 'sqm')} · ${other.address || cityOf(other)}`
+    : `${other.contact?.name || ''} · ${optText(other.purpose_id)} · ${fmt.size(other.size_value, other.size_unit)}`;
+  return `<li class="match ${m.near ? 'is-near' : 'lvl-' + m.level}"><a href="#/m/${side}/${other.id}">
+    <span class="match-lvl">${m.near ? 'כמעט מתאים' : LEVELS[m.level]}</span>
+    <span class="match-title">${esc(title)}</span>${chipsHTML(m)}</a></li>`;
+}
+function matchSection(module, d) {
+  if (d.status !== 'active') return '';
+  const side = module === 'lead' ? 'owner' : 'lead';
+  const ms = matchesFor(module, d), good = ms.filter(m => !m.near), near = ms.filter(m => m.near);
+  const head = module === 'lead' ? 'נכסים מתאימים' : 'מתעניינים מתאימים';
+  return `<section class="card-matches"><h3>${head} <bdi class="num">(${good.length})</bdi></h3>
+    ${good.length ? `<ul class="match-list">${good.map(m => matchItem(m, side)).join('')}</ul>` : '<p class="hint">אין כרגע התאמות.</p>'}
+    ${near.length ? `<details class="near"><summary>כמעט מתאים <bdi class="num">(${near.length})</bdi></summary>
+      <ul class="match-list">${near.map(m => matchItem(m, side)).join('')}</ul></details>` : ''}</section>`;
+}
+
+/* list filters from the dashboard: ?g=<group>&a=<city>  ·  ?u=soon (needed soon)  ·  ?u=stale (not updated 30+ days) */
+const DAY = 86400000;
+// calendar day in Israel: dates stay as they are, timestamps are converted (a 23:30 save is still "today")
+const localDay = (v) => { const s = String(v || ''); return s.length <= 10 ? s : new Date(s).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); };
+const daysFrom = (iso) => Math.round((new Date(localDay(iso) + 'T00:00:00') - new Date(todayISO() + 'T00:00:00')) / DAY);
+const lastTouch = (d) => d.updated_at || d.created_at;
+const isSoon = (d) => d.status === 'active' && !!d.needed_by && daysFrom(d.needed_by) <= 7;
+const isStale = (d) => d.status === 'active' && daysFrom(lastTouch(d)) <= -30;
+function listFilter(module, query) {
+  const q = new URLSearchParams(query), g = q.get('g'), a = q.get('a'), u = q.get('u');
+  if (u === 'soon' && module === 'lead') return { label: 'נדרש בשבוע הקרוב', test: isSoon };
+  if (u === 'stale') return { label: 'לא עודכן 30+ יום', test: isStale };
+  if (g && MATCH_GROUPS[g]) return { label: MATCH_GROUPS[g] + (a ? ' · ' + a : ''),
+    test: (d) => d.status === 'active' && optGroup(d.purpose_id) === g && (!a || cityOf(d) === a) };
+  return null;
+}
+
+function dashboardView() {
+  const leads = deals('lead'), owners = deals('owner'), all = [...leads.map(d => ['lead', d]), ...owners.map(d => ['owner', d])];
+  const name = (d) => esc(d.contact?.name || '');
+  const more = (n, cap, href, label = 'הכול') => n > cap ? `<a class="more" href="${href}">${label} (${fmt.bi(n)})</a>` : '';
+  // 1. לטיפול היום
+  const soon = leads.filter(isSoon).sort((a, b) => a.needed_by.localeCompare(b.needed_by));
+  const stale = all.filter(([, d]) => isStale(d)).sort((a, b) => String(lastTouch(a[1])).localeCompare(String(lastTouch(b[1]))));
+  const soonRow = (d) => { const n = daysFrom(d.needed_by);
+    return `<li class="urgent ${n <= 2 ? 'red' : 'yellow'}"><a href="#/m/lead/${d.id}"><span class="u-name">${name(d)}</span>
+      <span class="u-why">${esc(optText(d.purpose_id))} · ${n < 0 ? `עבר המועד לפני ${fmt.bi(-n)} ימים` : n === 0 ? 'נדרש היום' : n === 1 ? 'נדרש מחר' : `נדרש בעוד ${fmt.bi(n)} ימים`}</span></a></li>`; };
+  const staleRow = ([m, d]) => `<li class="urgent stale"><a href="#/m/${m}/${d.id}"><span class="u-name">${name(d)}</span>
+      <span class="u-why">${m === 'lead' ? 'מתעניין' : 'נכס'} · לא עודכן ${fmt.bi(-daysFrom(lastTouch(d)))} יום</span></a></li>`;
+  const staleLeads = stale.filter(([m]) => m === 'lead').length, staleOwners = stale.length - staleLeads;
+  const urgent = `<section class="dash-sec" id="dash-urgent"><h2>לטיפול היום</h2>
+    <h3>נדרש בקרוב</h3>${soon.length ? `<ul class="u-list">${soon.slice(0, 5).map(soonRow).join('')}</ul>${more(soon.length, 5, '#/m/lead?u=soon')}`
+      : '<p class="hint">אין מתעניינים שנדרשים בשבוע הקרוב.</p>'}
+    <h3>לא עודכן 30+ יום</h3>${stale.length ? `<ul class="u-list">${stale.slice(0, 5).map(staleRow).join('')}</ul>
+      ${stale.length > 5 ? `<p class="more-row">${more(staleLeads, 0, '#/m/lead?u=stale', 'מתעניינים')}${more(staleOwners, 0, '#/m/owner?u=stale', 'נכסים')}</p>` : ''}`
+      : '<p class="hint">כל הרשומות הפעילות עודכנו בחודש האחרון.</p>'}
+  </section>`;
+  // 2. התאמות חמות
+  const ms = allMatches().filter(m => !m.near);
+  const hot = `<section class="dash-sec" id="dash-matches"><h2>התאמות חמות</h2>
+    ${ms.length ? `<ul class="match-list">${ms.slice(0, 5).map(m => `<li class="match lvl-${m.level}"><a href="#/m/lead/${m.lead.id}">
+      <span class="match-lvl">${LEVELS[m.level]}</span>
+      <span class="match-title">${name(m.lead)} ← ${esc(optText(m.owner.purpose_id))} · ${esc(m.owner.address || cityOf(m.owner))}</span>${chipsHTML(m)}</a></li>`).join('')}</ul>
+      <a class="more" href="#/matches">כל ההתאמות (${fmt.bi(ms.length)})</a>`
+      : '<p class="hint">אין כרגע התאמות. כדי שייעוד ייכלל בהתאמות, בחרי לו קבוצה ב"עריכת הרשימה" בטופס.</p>'}
+  </section>`;
+  // 3. היצע מול ביקוש: active leads vs active properties, by purpose group × city
+  const cell = new Map();
+  for (const [m, d] of all) {
+    if (d.status !== 'active') continue;
+    const g = optGroup(d.purpose_id); if (!g) continue;
+    const a = cityOf(d), key = g + '|' + a, c = cell.get(key) || { g, a, lead: 0, owner: 0 };
+    c[m]++; cell.set(key, c);
+  }
+  const cells = [...cell.values()].sort((x, y) => Math.abs(y.lead - y.owner) - Math.abs(x.lead - x.owner) || (y.lead + y.owner) - (x.lead + x.owner));
+  const link = (m, c) => `#/m/${m}?g=${c.g}&a=${encodeURIComponent(c.a)}`;
+  const sd = `<section class="dash-sec" id="dash-supply"><h2>היצע מול ביקוש</h2>
+    ${cells.length ? `<ul class="sd-list">${cells.slice(0, 6).map(c => `<li class="sd ${c.lead > c.owner ? 'short' : c.owner > c.lead ? 'surplus' : 'even'}">
+      <span class="sd-what">${MATCH_GROUPS[c.g]} · ${esc(c.a)}</span>
+      <a href="${link('lead', c)}" class="sd-n">מחפשים: <bdi class="num">${c.lead}</bdi></a>
+      <a href="${link('owner', c)}" class="sd-n">נכסים: <bdi class="num">${c.owner}</bdi></a>
+      <span class="sd-tag">${c.lead > c.owner ? 'חסר היצע' : c.owner > c.lead ? 'עודף היצע' : 'מאוזן'}</span></li>`).join('')}</ul>`
+      : '<p class="hint">אין עדיין רשומות פעילות.</p>'}
+  </section>`;
+  // 4. קצב וסגירות: this calendar month; average days to close over the last 6 months
+  const month = todayISO().slice(0, 7);
+  const created = (m, d) => m === 'lead' ? d.lead_date : localDay(d.created_at);
+  const inMonth = (iso) => !!iso && localDay(iso).slice(0, 7) === month;
+  const newThis = all.filter(([m, d]) => inMonth(created(m, d))).length;
+  const closedThis = all.filter(([, d]) => d.status === 'closed' && inMonth(d.closed_at)).length;
+  const irrThis = all.filter(([, d]) => d.status === 'irrelevant' && inMonth(d.closed_at)).length;
+  // leads only: from the lead date to the closing day
+  const durations = leads.filter(d => d.status === 'closed' && d.closed_at && daysFrom(d.closed_at) >= -183)
+    .map(d => daysFrom(d.closed_at) - daysFrom(d.lead_date));
+  const avg = durations.length ? Math.round(durations.reduce((s, x) => s + x, 0) / durations.length) : null;
+  const pace = `<section class="dash-sec" id="dash-pace"><h2>קצב וסגירות</h2><div class="kpis">
+    <div class="kpi"><strong class="num">${newThis}</strong><span>חדשים החודש</span></div>
+    <div class="kpi"><strong class="num">${closedThis}</strong><span>נסגרו החודש</span></div>
+    <div class="kpi"><strong class="num">${irrThis}</strong><span>לא רלוונטיים החודש</span></div>
+    <div class="kpi"><strong class="num">${avg == null ? '—' : avg}</strong><span>ימים בממוצע עד סגירה</span></div>
+  </div></section>`;
+  return { html: `${topbar('לוח עבודה', '')}<div class="content dash">${urgent}${hot}${sd}${pace}</div>` };
+}
+
+function matchesView() {
+  const ms = allMatches(), good = ms.filter(m => !m.near), near = ms.filter(m => m.near);
+  const byLead = (list) => {
+    const groups = new Map();
+    for (const m of list) { if (!groups.has(m.lead.id)) groups.set(m.lead.id, []); groups.get(m.lead.id).push(m); }
+    return [...groups.values()].map(g => { const l = g[0].lead; return `<li class="ml-group"><a class="ml-lead" href="#/m/lead/${l.id}">${esc(l.contact?.name)}
+      <small>${esc(optText(l.need_id))} · ${esc(optText(l.purpose_id))} · ${fmt.size(l.size_value, l.size_unit)}</small></a>
+      <ul class="match-list">${g.map(m => matchItem(m, 'owner')).join('')}</ul></li>`; }).join('');
+  };
+  return { html: `${topbar('כל ההתאמות', '#/', 'חזרה ללוח')}<div class="content">
+    ${good.length ? `<ul class="ml">${byLead(good)}</ul>` : '<p class="state">אין כרגע התאמות.</p>'}
+    ${near.length ? `<details class="near"><summary>כמעט מתאים <bdi class="num">(${near.length})</bdi></summary><ul class="ml">${byLead(near)}</ul></details>` : ''}
+  </div>` };
+}
+
+/* ════════════ boot ════════════ */
+async function afterLogin() {
+  S.session = await DB.session();
+  if (!S.session) return render();
+  try { S.member = await DB.isMember(); } catch (e) { console.error(e); S.member = null; }
+  S.data = null;
+  render();
+}
+async function boot() {
+  try { S.session = await DB.session(); } catch (e) { console.error(e); }
+  if (S.session) await afterLogin(); else render();
+  DB.onAuth((s) => { if (!s && S.session) { S.session = null; S.data = null; render(); } });
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && S.session && S.data && parseRoute().name !== 'form') { await reload(); render(); }
+  });
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+boot();
+</script>
+</body>
+</html>
