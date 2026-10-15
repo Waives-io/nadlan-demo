@@ -1,8 +1,8 @@
 // Minimal service worker: makes the app installable and opens the last loaded shell offline.
 // Network first, so a new deploy is always picked up. Supabase / map requests are never cached.
 // Other apps on the same origin (the demo at /nadlan-demo/) keep their caches: only pl-shell-* is cleaned.
-const CACHE = 'nadlan-demo-shell-v3', PREFIX = 'nadlan-demo-shell-';
-const SHELL = ['./', './index.html', './manifest.json', './seed.js', './demo-db.js', './dashboard-look.css', './tune.js', './assets/logo.png', './assets/logo-dark.png', './assets/mark.png', './icons/icon-192.png'];
+const CACHE = 'nadlan-demo-shell-v5', PREFIX = 'nadlan-demo-shell-';
+const SHELL = ['./', './index.html', './manifest.json', './seed.js', './demo-db.js', './dashboard-look.css', './tune.js', './screens.js', './assets/photos/login-hero.jpg', './assets/photos/banner-leads.jpg', './assets/photos/banner-props.jpg', './assets/logo.png', './assets/logo-dark.png', './assets/mark.png', './icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k)))));
