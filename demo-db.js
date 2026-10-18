@@ -23,7 +23,7 @@
   };
 
   // bump when demo/seed.js changes: every visitor gets the new demo data on the next visit (older copies lack new fields)
-  const SEED_VERSION = 6;
+  const SEED_VERSION = 7;  // 7: round 2+3 shape (size range, brokers, ח.פ., nullable fields, owner notes)
   const fresh = () => ({ anchor: today(), dirty: false, seed: SEED_VERSION, ...window.PL_DEMO_SEED(today()) });
   // A new month: an untouched demo is re-seeded; a demo the visitor changed moves all its dates forward,
   // so "this month" and "needed soon" stay meaningful.
@@ -58,7 +58,12 @@
     if (c.entity_type === 'company' && !c.company_name?.trim()) throw new Error('company required');
     let row = db.contacts.find(x => x.phone === phone);
     if (!row) { row = { id: id(), phone, created_at: now() }; db.contacts.push(row); }
-    Object.assign(row, { name: c.name.trim(), entity_type: c.entity_type, company_name: c.entity_type === 'company' ? c.company_name.trim() : null });
+    // same rules as upsert_contact (005): private / company (+ ח.פ.) / broker (+ licence); an older payload never erases them
+    // an older app (no "v") does not know brokers: it never downgrades one (as upsert_contact in 005)
+    const t = !('v' in c) && row.entity_type === 'broker' ? 'broker' : c.entity_type || 'private';
+    Object.assign(row, { name: c.name.trim(), entity_type: t, company_name: t === 'company' ? c.company_name.trim() : null,
+      company_number: t === 'company' ? (('company_number' in c) ? c.company_number : row.company_number) || null : null,
+      broker_license: t === 'broker' ? (('broker_license' in c) ? c.broker_license : row.broker_license) || null : null });
     return row.id;
   };
   const delay = () => new Promise(r => setTimeout(r, 40));
@@ -101,13 +106,17 @@
       await delay();
       const snapshot = clone(db.contacts);
       try {
+        const { contact: _c, ...vals } = p;
+        if (vals.size_min != null && vals.size_max != null && vals.size_min > vals.size_max) throw new Error('size range');
+        for (const k of ['size_min', 'size_max', 'size_value', 'height_m', 'budget_value', 'radius_m', 'built_sqm', 'plot_sqm', 'asking_price', 'monthly_rent', 'asking_rent'])
+          if (vals[k] != null && vals[k] !== '' && !(+vals[k] > 0)) throw new Error(`${k} must be > 0`);
         const contact_id = upsertContact(p.contact);
         const table = db[module];
         let row = table.find(r => r.id === p.id);
         const { contact, ...fields } = p;
         if (!row) { row = { id: p.id, status: 'active', closed_at: null, created_at: now() }; table.push(row); }
         Object.assign(row, fields, { contact_id, updated_at: now() });
-        if (module === 'owner') row.yield_pct = row.monthly_rent ? Math.round(row.monthly_rent * 12 / row.asking_price * 10000) / 100 : null;
+        if (module === 'owner') row.yield_pct = row.monthly_rent && row.asking_price ? Math.round(row.monthly_rent * 12 / row.asking_price * 10000) / 100 : null;
         save();
         return { id: p.id, contact_id };
       } catch (e) { db.contacts = snapshot; throw e; }
@@ -123,6 +132,7 @@
       if (patch.value && db.options.some(x => x.id !== oid && x.list_key === o.list_key && x.value === patch.value)) { const e = new Error('duplicate key'); e.code = '23505'; throw e; }
       Object.assign(o, patch); save(); return clone(o);
     },
+    async hideField(fid) { const f = db.fields.find(x => x.id === fid); if (!f) throw new Error('השדה לא נמצא'); f.hidden = true; save(); return clone(f); },
     async addField(f) { const row = { id: id(), key: 'f_' + Math.random().toString(16).slice(2, 12), created_at: now(), ...f }; db.fields.push(row); save(); return clone(row); },
     async setStatus(module, did, status) {
       const r = db[module].find(x => x.id === did);
